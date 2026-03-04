@@ -7,20 +7,20 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CommandeRepository::class)]
 #[ORM\Table(name: 'commande')]
-#[ORM\UniqueConstraint(name: 'uniq_commande_session_article', columns: ['stripe_session_id', 'id_article'])]
+#[ORM\UniqueConstraint(name: 'uniq_commande_session_article', columns: ['stripe_session_id', 'article_id'])]
 class Commande
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_commande')]
+    #[ORM\Column(name: 'commande_id')]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: 'id_user', referencedColumnName: 'ID', nullable: true, onDelete: 'SET NULL')]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $user = null;
 
     #[ORM\ManyToOne(targetEntity: Article::class)]
-    #[ORM\JoinColumn(name: 'id_article', referencedColumnName: 'id_article', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'article_id', referencedColumnName: 'article_id', nullable: false, onDelete: 'CASCADE')]
     private ?Article $article = null;
 
     #[ORM\Column]

@@ -14,7 +14,7 @@ class Skill
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_skill')]
+    #[ORM\Column(name: 'skill_id')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -43,7 +43,7 @@ class Skill
     private ?string $contexte_skill = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'skills')]
-    #[ORM\JoinColumn(name: 'createur_id', referencedColumnName: 'ID', nullable: true, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'createur_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
     private ?User $createur = null;
 
     #[ORM\OneToMany(mappedBy: 'skill', targetEntity: LearningPath::class)]

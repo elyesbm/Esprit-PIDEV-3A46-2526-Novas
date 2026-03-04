@@ -8,14 +8,15 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;    
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Validator\Constraints as Assert; // ⬅️ AJOUTE CECI
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'ID')]
+    #[ORM\Column(name: 'id')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -44,13 +45,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $ROLE = null;
 
     #[ORM\Column(length: 255)]
+    #[Ignore]
     private ?string $password = null;
 
-    #[ORM\Column(name: 'ACTIF', type: 'boolean', options: ['default' => true])]
+    #[ORM\Column(name: 'actif', type: 'boolean', options: ['default' => true])]
     private bool $ACTIF = true;
 
     // 2FA - Two Factor Authentication
     #[ORM\Column(length: 255, nullable: true)]
+    #[Ignore]
     private ?string $twoFactorSecret = null;
 
     #[ORM\Column(type: 'datetime', nullable: true)]
@@ -129,14 +132,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setROLE(string $ROLE): static { $this->ROLE = $ROLE; return $this; }
 
     public function getPassword(): ?string { return $this->password; }
-    public function setPassword(string $password): static { $this->password = $password; return $this; }
+    public function setPassword(#[\SensitiveParameter] string $password): static { $this->password = $password; return $this; }
 
     public function getACTIF(): bool { return $this->ACTIF; }
     public function setACTIF(bool $ACTIF): static { $this->ACTIF = $ACTIF; return $this; }
 
     // 2FA Getters and Setters
     public function getTwoFactorSecret(): ?string { return $this->twoFactorSecret; }
-    public function setTwoFactorSecret(?string $twoFactorSecret): static { $this->twoFactorSecret = $twoFactorSecret; return $this; }
+    public function setTwoFactorSecret(#[\SensitiveParameter] ?string $twoFactorSecret): static { $this->twoFactorSecret = $twoFactorSecret; return $this; }
 
     public function getTwoFactorEnabledAt(): ?\DateTimeInterface { return $this->twoFactorEnabledAt; }
     public function setTwoFactorEnabledAt(?\DateTimeInterface $twoFactorEnabledAt): static { $this->twoFactorEnabledAt = $twoFactorEnabledAt; return $this; }

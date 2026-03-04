@@ -11,7 +11,7 @@ class Reservation
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_reservation')]
+    #[ORM\Column(name: 'reservation_id')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -41,12 +41,12 @@ class Reservation
     private int $statut_reservation = 0;
 
     #[ORM\ManyToOne(inversedBy: 'reservations')]
-    #[ORM\JoinColumn(name: 'id_user', referencedColumnName: 'ID', nullable: false)]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false)]
     #[Assert\NotNull(message: "L'utilisateur est obligatoire.")]
     private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'reservations')]
-    #[ORM\JoinColumn(name: 'id_atelier', referencedColumnName: 'id_atelier', nullable: false)]
+    #[ORM\JoinColumn(name: 'atelier_id', referencedColumnName: 'atelier_id', nullable: false)]
     #[Assert\NotNull(message: "L'atelier est obligatoire.")]
     private ?Atelier $atelier = null;
 

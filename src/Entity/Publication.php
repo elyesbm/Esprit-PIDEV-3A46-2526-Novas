@@ -15,7 +15,7 @@ class Publication
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_pub')]
+    #[ORM\Column(name: 'pub_id')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -61,7 +61,7 @@ class Publication
 private ?int $contexte = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'publications')]
-    #[ORM\JoinColumn(name: 'id_auteur', referencedColumnName: 'ID', nullable: false)]
+    #[ORM\JoinColumn(name: 'auteur_id', referencedColumnName: 'id', nullable: false)]
     private ?User $auteur = null;
 
     #[ORM\OneToMany(mappedBy: 'publication', targetEntity: Commentaire::class, cascade: ['remove'], orphanRemoval: true)]

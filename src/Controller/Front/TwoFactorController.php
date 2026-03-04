@@ -192,8 +192,12 @@ class TwoFactorController extends AbstractController
 
     private function handleSuccessfulAuthentication(User $user, Request $request, \Symfony\Bundle\SecurityBundle\Security $security): Response
     {
-        // Connecter l'utilisateur officiellement. Dans Symfony > 6.2, c'est la façon sécurisée.
-        // 'main' correspond au nom du firewall dans security.yaml
+        // ✅ Poser un flag AVANT login() pour que TwoFactorAuthenticationListener
+        // sache que cet appel vient de la vérification 2FA et ne doit PAS
+        // re-intercepter l'événement INTERACTIVE_LOGIN.
+        $request->getSession()->set('2fa_just_verified', true);
+
+        // Connecter l'utilisateur officiellement.
         $security->login($user, 'security.authenticator.form_login.main');
 
         // Nettoyer la session
@@ -207,7 +211,7 @@ class TwoFactorController extends AbstractController
         if (in_array('ROLE_PSY', $roles, true)) {
             return $this->redirectToRoute('app_publications_index');
         }
-        
+
         return $this->redirectToRoute('app_user_profile');
     }
 }

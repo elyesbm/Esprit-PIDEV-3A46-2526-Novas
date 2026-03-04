@@ -16,7 +16,7 @@ class LearningPath
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_learning')]
+    #[ORM\Column(name: 'learning_id')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -46,7 +46,7 @@ class LearningPath
     private ?string $url = null;
 
     #[ORM\ManyToOne(targetEntity: Skill::class, inversedBy: 'learningPaths')]
-    #[ORM\JoinColumn(name: 'id_skill', referencedColumnName: 'id_skill', nullable: false)]
+    #[ORM\JoinColumn(name: 'skill_id', referencedColumnName: 'skill_id', nullable: false)]
     private ?Skill $skill = null;
 
     public function getId(): ?int { return $this->id; }

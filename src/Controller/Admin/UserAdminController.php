@@ -13,7 +13,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Dompdf\Dompdf;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Route('/admin/users', name: 'app_admin_users_')]
 class UserAdminController extends AbstractController
@@ -25,48 +24,69 @@ class UserAdminController extends AbstractController
     ) {
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // LIST avec pagination (5 par page)
+    // ─────────────────────────────────────────────────────────────────────
     #[Route('/', name: 'list')]
     public function list(Request $request): Response
     {
         $roleFilter = $request->query->get('role', '');
-        $searchQ = $request->query->get('q', '');
-        $sort = $request->query->get('sort', 'asc'); // asc ou desc
+        $searchQ    = $request->query->get('q', '');
+        $sort       = $request->query->get('sort', 'asc');
+        $limit      = 5;
+        $page       = max(1, (int) $request->query->get('page', 1));
+
+        // QueryBuilder avec filtres
+        $qb = $this->userRepository->createQueryBuilder('u');
 
         if ($searchQ !== '') {
-            $users = $this->userRepository->searchByQuery($searchQ);
-            if ($roleFilter !== '') {
-                $users = array_filter($users, fn(User $u) => $u->getROLE() === $roleFilter);
-            }
-        } elseif ($roleFilter !== '') {
-            $users = $this->userRepository->findByRole($roleFilter);
-        } else {
-            $users = $this->userRepository->findAllOrderedByNom();
+            $qb->andWhere('u.NOM LIKE :q OR u.PRENOM LIKE :q OR u.EMAIL LIKE :q')
+               ->setParameter('q', '%' . $searchQ . '%');
         }
 
-        // Appliquer le tri alphabétique
-        usort($users, function(User $a, User $b) use ($sort) {
-            $nomA = $a->getNOM() ?? '';
-            $nomB = $b->getNOM() ?? '';
-            $comparison = strcasecmp($nomA, $nomB);
-            
-            return $sort === 'desc' ? -$comparison : $comparison;
-        });
+        if ($roleFilter !== '') {
+            $qb->andWhere('u.ROLE = :role')
+               ->setParameter('role', $roleFilter);
+        }
 
-        $total = $this->userRepository->count([]);
+        $qb->orderBy('u.NOM', $sort === 'desc' ? 'DESC' : 'ASC');
+
+        // Nombre total (pour la pagination)
+        $countQb = clone $qb;
+        $totalFiltered = (int) $countQb->select('COUNT(u.id)')->getQuery()->getSingleScalarResult();
+
+        // Page courante
+        $users = $qb->setFirstResult(($page - 1) * $limit)
+                    ->setMaxResults($limit)
+                    ->getQuery()
+                    ->getResult();
+
+        $totalPages = max(1, (int) ceil($totalFiltered / $limit));
+
+        // Stats globales (pas filtrées)
+        $total       = $this->userRepository->count([]);
         $totalAdmins = $this->userRepository->countByRole('ROLE_ADMIN');
-        $totalPsy = $this->userRepository->countByRole('ROLE_PSY');
+        $totalPsy    = $this->userRepository->countByRole('ROLE_PSY');
 
         return $this->render('admin/user/list.html.twig', [
-            'users' => $users,
-            'total' => $total,
-            'total_admins' => $totalAdmins,
-            'total_psy' => $totalPsy,
-            'role_filter' => $roleFilter,
-            'search_q' => $searchQ,
-            'sort' => $sort,
+            'users'          => $users,
+            'total'          => $total,
+            'total_admins'   => $totalAdmins,
+            'total_psy'      => $totalPsy,
+            'role_filter'    => $roleFilter,
+            'search_q'       => $searchQ,
+            'sort'           => $sort,
+            // Pagination
+            'page'           => $page,
+            'total_pages'    => $totalPages,
+            'total_filtered' => $totalFiltered,
+            'limit'          => $limit,
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // NEW
+    // ─────────────────────────────────────────────────────────────────────
     #[Route('/new', name: 'new')]
     public function new(Request $request): Response
     {
@@ -92,6 +112,9 @@ class UserAdminController extends AbstractController
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // EDIT
+    // ─────────────────────────────────────────────────────────────────────
     #[Route('/{id}/edit', name: 'edit', requirements: ['id' => '\d+'])]
     public function edit(int $id, Request $request): Response
     {
@@ -120,6 +143,9 @@ class UserAdminController extends AbstractController
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // DELETE
+    // ─────────────────────────────────────────────────────────────────────
     #[Route('/{id}/delete', name: 'delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(int $id, Request $request): Response
     {
@@ -139,6 +165,9 @@ class UserAdminController extends AbstractController
         return $this->redirectToRoute('app_admin_users_list');
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // TOGGLE ACTIVE
+    // ─────────────────────────────────────────────────────────────────────
     #[Route('/{id}/toggle-active', name: 'toggle_active', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function toggleActive(int $id, Request $request): Response
     {
@@ -148,8 +177,7 @@ class UserAdminController extends AbstractController
         }
 
         if ($this->isCsrfTokenValid('toggle_active_' . $id, $request->request->get('_token'))) {
-            $current = $user->getACTIF();
-            $user->setACTIF(!$current);
+            $user->setACTIF(!$user->getACTIF());
             $this->em->flush();
             $this->addFlash('success', 'Statut du compte modifié.');
         } else {
@@ -159,11 +187,14 @@ class UserAdminController extends AbstractController
         return $this->redirectToRoute('app_admin_users_list');
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // EXPORT PDF
+    // ─────────────────────────────────────────────────────────────────────
     #[Route('/export/pdf', name: 'export_pdf')]
     public function exportPdf(Request $request): Response
     {
         $roleFilter = $request->query->get('role', '');
-        $searchQ = $request->query->get('q', '');
+        $searchQ    = $request->query->get('q', '');
 
         if ($searchQ !== '') {
             $users = $this->userRepository->searchByQuery($searchQ);
@@ -176,16 +207,13 @@ class UserAdminController extends AbstractController
             $users = $this->userRepository->findAllOrderedByNom();
         }
 
-        // Tri alphabétique
         usort($users, fn(User $a, User $b) => strcasecmp($a->getNOM() ?? '', $b->getNOM() ?? ''));
 
-        // Générer le HTML pour le PDF
         $html = $this->renderView('admin/user/export_pdf.html.twig', [
-            'users' => $users,
+            'users'       => $users,
             'generatedAt' => new \DateTime(),
         ]);
 
-        // Créer le PDF
         $dompdf = new Dompdf();
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
@@ -195,8 +223,9 @@ class UserAdminController extends AbstractController
             $dompdf->output(),
             Response::HTTP_OK,
             [
-                'Content-Type' => 'application/pdf',
+                'Content-Type'        => 'application/pdf',
                 'Content-Disposition' => 'attachment; filename="utilisateurs_' . date('Y-m-d_H-i-s') . '.pdf"',
             ]
         );
-    }}
+    }
+}

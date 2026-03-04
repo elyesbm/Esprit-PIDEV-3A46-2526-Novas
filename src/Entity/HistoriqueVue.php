@@ -11,15 +11,15 @@ class HistoriqueVue
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_vue')]
+    #[ORM\Column(name: 'vue_id')]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: 'id_user', referencedColumnName: 'ID', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
 
     #[ORM\ManyToOne(targetEntity: Article::class)]
-    #[ORM\JoinColumn(name: 'id_article', referencedColumnName: 'id_article', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'article_id', referencedColumnName: 'article_id', nullable: false, onDelete: 'CASCADE')]
     private ?Article $article = null;
 
     #[ORM\Column(name: 'date_vue', type: 'datetime_immutable')]

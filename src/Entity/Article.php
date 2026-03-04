@@ -10,7 +10,7 @@ class Article
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_article')]
+    #[ORM\Column(name: 'article_id')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -36,11 +36,11 @@ class Article
 
     // 🔗 CLÉS ÉTRANGÈRES
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'articles')]
-    #[ORM\JoinColumn(name: 'id_etudiant', referencedColumnName: 'ID', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'etudiant_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $auteur = null;
 
     #[ORM\ManyToOne(targetEntity: Categorie::class, inversedBy: 'articles')]
-    #[ORM\JoinColumn(name: 'id_categorie', referencedColumnName: 'id_categorie', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'categorie_id', referencedColumnName: 'categorie_id', nullable: false, onDelete: 'CASCADE')]
     private ?Categorie $categorie = null;
 
     public function getId(): ?int { return $this->id; }

@@ -19,7 +19,7 @@ class Offrejob
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_offre')]
+    #[ORM\Column(name: 'offre_id')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -82,7 +82,7 @@ class Offrejob
     private ?\DateTimeInterface $date_creation_offre = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'offrejobs')]
-    #[ORM\JoinColumn(name: 'createur_id', referencedColumnName: 'ID', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'createur_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $createur = null;
 
     #[ORM\OneToMany(mappedBy: 'offre', targetEntity: CandidatureJob::class)]

@@ -51,42 +51,43 @@
     {# Stats Cards - Personnalisées selon le rôle #}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {% if user.ROLE == 'ROLE_ADMIN' %}
-            {# Statistiques pour l'Administrateur #}
+            {# Statistiques pour l'Administrateur — données réelles #}
             <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 hover-card">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"><i data-lucide="users" class="w-6 h-6"></i></div>
                     <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Gestion</span>
                 </div>
-                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">1,234</h3>
+                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">{{ totalUtilisateurs|number_format(0, ',', ' ') }}</h3>
                 <p class="text-sm text-slate-500">Utilisateurs actifs</p>
             </div>
-            
+
             <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 hover-card">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-xl bg-rose-100 dark:bg-rose-900/30 text-rose-600"><i data-lucide="shopping-bag" class="w-6 h-6"></i></div>
                     <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-full">Contenu</span>
                 </div>
-                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">456</h3>
+                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">{{ totalArticles|number_format(0, ',', ' ') }}</h3>
                 <p class="text-sm text-slate-500">Articles marketplace</p>
             </div>
-            
+
             <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 hover-card">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600"><i data-lucide="briefcase" class="w-6 h-6"></i></div>
                     <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Emplois</span>
                 </div>
-                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">89</h3>
+                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">{{ totalOffres|number_format(0, ',', ' ') }}</h3>
                 <p class="text-sm text-slate-500">Offres d'emploi actives</p>
             </div>
-            
+
             <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 hover-card">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600"><i data-lucide="calendar-days" class="w-6 h-6"></i></div>
                     <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">Formations</span>
                 </div>
-                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">32</h3>
-                <p class="text-sm text-slate-500">Ateliers ce mois</p>
+                <h3 class="text-3xl font-bold text-slate-900 dark:text-white">{{ totalAteliers|number_format(0, ',', ' ') }}</h3>
+                <p class="text-sm text-slate-500">Ateliers au total</p>
             </div>
+
         {% elseif user.ROLE == 'ROLE_FORMATEUR' %}
             {# Statistiques pour le Formateur #}
             <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 hover-card">
@@ -167,7 +168,7 @@
     {# Quick Actions - Personnalisées selon le rôle #}
     <div class="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-2xl p-8 text-white shadow-lg">
         <h3 class="text-xl font-bold mb-6">Actions rapides</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {% if user.ROLE == 'ROLE_ADMIN' %}
                 {# Actions pour Administrateur #}
                 <a href="{{ path('app_admin_users_new') }}" class="p-4 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all text-center group">
@@ -185,6 +186,17 @@
                 <a href="{{ path('app_admin_skills_new') }}" class="p-4 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all text-center group">
                     <i data-lucide="zap" class="w-8 h-8 mx-auto mb-2 group-hover:scale-110 transition-transform"></i>
                     <p class="font-medium">Nouvelle compétence</p>
+                </a>
+                {# ★ NOUVEAU — Publications signaleies #}
+                <a href="{{ path('app_admin_publications_list') }}?filter=reported"
+                   class="p-4 rounded-xl bg-red-500/30 hover:bg-red-500/50 backdrop-blur-sm transition-all text-center group relative border border-red-300/30">
+                    <i data-lucide="flag" class="w-8 h-8 mx-auto mb-2 group-hover:scale-110 transition-transform text-red-200"></i>
+                    <p class="font-medium">Publications signalées</p>
+                    {% if totalPublicationsSignalees is defined and totalPublicationsSignalees > 0 %}
+                        <span class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow">
+                            {{ totalPublicationsSignalees }}
+                        </span>
+                    {% endif %}
                 </a>
             {% elseif user.ROLE == 'ROLE_FORMATEUR' %}
                 {# Actions pour Formateur #}
@@ -226,25 +238,69 @@
         </div>
     </div>
 
-    {# Recent Activity #}
+    {# Recent Activity — données réelles de la BD #}
     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700">
         <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Activité récente</h3>
-            <a href="#" class="text-sm text-primary-600 hover:text-primary-700">Voir tout</a>
+            <a href="{{ path('app_admin_users_list') }}" class="text-sm text-primary-600 hover:text-primary-700">Voir tout</a>
         </div>
         <div class="divide-y divide-slate-100 dark:divide-slate-700">
-            <div class="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
-                <div class="flex-1"><p class="font-medium text-slate-900 dark:text-white">Nouvel utilisateur inscrit</p><p class="text-sm text-slate-500">Marie Dupont • Il y a 5 min</p></div>
-            </div>
-            <div class="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                <div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 flex items-center justify-center"><i data-lucide="shopping-bag" class="w-5 h-5"></i></div>
-                <div class="flex-1"><p class="font-medium text-slate-900 dark:text-white">Article publié</p><p class="text-sm text-slate-500">MacBook Pro M2 • Il y a 12 min</p></div>
-            </div>
-            <div class="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 flex items-center justify-center"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
-                <div class="flex-1"><p class="font-medium text-slate-900 dark:text-white">Nouvelle offre d'emploi</p><p class="text-sm text-slate-500">Tutorat Maths • Il y a 1h</p></div>
-            </div>
+
+            {# ── Derniers utilisateurs inscrits ── #}
+            {% for u in derniersUtilisateurs %}
+                <div class="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="user-plus" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-slate-900 dark:text-white truncate">Nouvel utilisateur inscrit</p>
+                        <p class="text-sm text-slate-500 truncate">{{ u.PRENOM }} {{ u.NOM }} • {{ u.EMAIL }}</p>
+                    </div>
+                    <span class="text-xs text-slate-400 flex-shrink-0">{{ u.ROLE }}</span>
+                </div>
+            {% endfor %}
+
+            {# ── Derniers articles publiés ── #}
+            {% for a in derniersArticles %}
+                <div class="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-slate-900 dark:text-white truncate">Article publié</p>
+                        <p class="text-sm text-slate-500 truncate">{{ a.titreArticle }} • {{ a.prixArticle|number_format(2, ',', ' ') }} €</p>
+                    </div>
+                    <span class="text-xs text-slate-400 flex-shrink-0 capitalize">{{ a.typeArticle }}</span>
+                </div>
+            {% endfor %}
+
+            {# ── Dernières offres d'emploi ── #}
+            {% for o in dernieresOffres %}
+                <div class="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="briefcase" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-slate-900 dark:text-white truncate">Nouvelle offre d'emploi</p>
+                        <p class="text-sm text-slate-500 truncate">{{ o.titreOffre }} • {{ o.lieu }}</p>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded-full
+                        {% if o.statutOffre == 'OUVERTE' %}bg-emerald-50 text-emerald-700
+                        {% elseif o.statutOffre == 'FERMEE' %}bg-slate-100 text-slate-600
+                        {% else %}bg-amber-50 text-amber-700{% endif %}">
+                        {{ o.statutOffre }}
+                    </span>
+                </div>
+            {% endfor %}
+
+            {# Aucune activité #}
+            {% if derniersUtilisateurs is empty and derniersArticles is empty and dernieresOffres is empty %}
+                <div class="p-8 text-center text-slate-400">
+                    <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+                    <p>Aucune activité récente.</p>
+                </div>
+            {% endif %}
+
         </div>
     </div>
 </div>

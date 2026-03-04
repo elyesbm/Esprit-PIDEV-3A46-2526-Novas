@@ -14,7 +14,7 @@ class Commentaire
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_comm')]
+    #[ORM\Column(name: 'comm_id')]
     #[Gedmo\TreePathSource]
     private ?int $id = null;
 
@@ -33,15 +33,15 @@ class Commentaire
     private ?string $contenu = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'commentaires')]
-    #[ORM\JoinColumn(name: 'id_auteur', referencedColumnName: 'ID', nullable: false)]
+    #[ORM\JoinColumn(name: 'auteur_id', referencedColumnName: 'id', nullable: false)]
     private ?User $auteur = null;
 
     #[ORM\ManyToOne(targetEntity: Publication::class, inversedBy: 'commentaires')]
-    #[ORM\JoinColumn(name: 'id_pub', referencedColumnName: 'id_pub', nullable: false)]
+    #[ORM\JoinColumn(name: 'pub_id', referencedColumnName: 'pub_id', nullable: false)]
     private ?Publication $publication = null;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
-    #[ORM\JoinColumn(name: 'id_parent', referencedColumnName: 'id_comm', nullable: true, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'parent_id', referencedColumnName: 'comm_id', nullable: true, onDelete: 'CASCADE')]
     #[Gedmo\TreeParent]
     private ?self $parent = null;
 

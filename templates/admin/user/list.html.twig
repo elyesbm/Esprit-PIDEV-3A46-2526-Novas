@@ -155,8 +155,79 @@
             </table>
         </div>
 
-        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700">
-            <p class="text-sm text-slate-500">Affichage de 1 à {{ users|length }} sur {{ total }}</p>
+        {# ── PAGINATION ── #}
+        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+
+            {# Texte d'info #}
+            <p class="text-sm text-slate-500">
+                Affichage de
+                <span class="font-semibold text-slate-700 dark:text-slate-300">{{ ((page - 1) * limit) + 1 }}</span>
+                à
+                <span class="font-semibold text-slate-700 dark:text-slate-300">{{ (page * limit) < total_filtered ? (page * limit) : total_filtered }}</span>
+                sur
+                <span class="font-semibold text-slate-700 dark:text-slate-300">{{ total_filtered }}</span>
+                utilisateur(s)
+            </p>
+
+            {# Navigation #}
+            {% if total_pages > 1 %}
+            <nav class="flex items-center gap-1" aria-label="Pagination">
+
+                {# Bouton Précédent #}
+                {% if page > 1 %}
+                    <a href="{{ path('app_admin_users_list', {page: page - 1, q: search_q, role: role_filter, sort: sort}) }}"
+                       class="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300
+                              bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                              hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        Préc
+                    </a>
+                {% else %}
+                    <span class="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-400
+                               bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-50">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        Préc
+                    </span>
+                {% endif %}
+
+                {# Numéros de pages #}
+                {% for p in 1..total_pages %}
+                    {% if p == page %}
+                        <span class="px-3 py-2 rounded-lg text-sm font-bold bg-primary-600 text-white shadow-sm">
+                            {{ p }}
+                        </span>
+                    {% elseif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                        <a href="{{ path('app_admin_users_list', {page: p, q: search_q, role: role_filter, sort: sort}) }}"
+                           class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300
+                                  bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                                  hover:bg-primary-50 hover:text-primary-600 hover:border-primary-300 dark:hover:bg-slate-700 transition-colors">
+                            {{ p }}
+                        </a>
+                    {% elseif p == page - 3 or p == page + 3 %}
+                        <span class="px-2 py-2 text-slate-400 text-sm">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {# Bouton Suivant #}
+                {% if page < total_pages %}
+                    <a href="{{ path('app_admin_users_list', {page: page + 1, q: search_q, role: role_filter, sort: sort}) }}"
+                       class="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300
+                              bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                              hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                        Suiv
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </a>
+                {% else %}
+                    <span class="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-400
+                               bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-50">
+                        Suiv
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </span>
+                {% endif %}
+
+            </nav>
+            {% endif %}
+
         </div>
     </div>
 </div>

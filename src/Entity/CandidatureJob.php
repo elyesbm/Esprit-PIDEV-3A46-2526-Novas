@@ -21,7 +21,7 @@ class CandidatureJob
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_candidature')]
+    #[ORM\Column(name: 'candidature_id')]
     private ?int $id = null;
 
     #[ORM\Column(name: 'message', type: Types::TEXT, length: 65535, nullable: true)]
@@ -39,11 +39,11 @@ class CandidatureJob
     private ?\DateTimeInterface $date_candidature = null;
 
     #[ORM\ManyToOne(targetEntity: Offrejob::class, inversedBy: 'candidatures')]
-    #[ORM\JoinColumn(name: 'offre_id', referencedColumnName: 'id_offre', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'offre_id', referencedColumnName: 'offre_id', nullable: false, onDelete: 'CASCADE')]
     private ?Offrejob $offre = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'candidatureJobs')]
-    #[ORM\JoinColumn(name: 'candidat_id', referencedColumnName: 'ID', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'candidat_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $candidat = null;
 
     #[ORM\Column(name: 'cv_name', length: 255, nullable: true)]

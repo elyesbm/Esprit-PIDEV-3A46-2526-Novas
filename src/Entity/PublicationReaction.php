@@ -8,20 +8,20 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: PublicationReactionRepository::class)]
 #[ORM\Table(name: 'publication_reaction')]
-#[ORM\UniqueConstraint(name: 'uniq_pub_user_reaction', columns: ['id_pub', 'id_user'])]
+#[ORM\UniqueConstraint(name: 'uniq_pub_user_reaction', columns: ['pub_id', 'user_id'])]
 class PublicationReaction
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'id_reaction')]
+    #[ORM\Column(name: 'reaction_id')]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Publication::class)]
-    #[ORM\JoinColumn(name: 'id_pub', referencedColumnName: 'id_pub', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'pub_id', referencedColumnName: 'pub_id', nullable: false, onDelete: 'CASCADE')]
     private ?Publication $publication = null;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: 'id_user', referencedColumnName: 'ID', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
 
     #[ORM\Column(type: 'smallint')]

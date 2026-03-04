@@ -14,7 +14,7 @@ class CvProfile
     private ?int $id = null;
 
     #[ORM\OneToOne(targetEntity: User::class, inversedBy: 'cvProfile')]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE', referencedColumnName: 'ID')]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE', referencedColumnName: 'id')]
     private ?User $user = null;
 
     /** Chemin vers le fichier CV uploadé */
