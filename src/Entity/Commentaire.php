@@ -41,11 +41,11 @@ class Commentaire
     private ?Publication $publication = null;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
-    #[ORM\JoinColumn(name: 'parent_id', referencedColumnName: 'comm_id', nullable: true, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'parent_id', referencedColumnName: 'comm_id', nullable: true)]
     #[Gedmo\TreeParent]
     private ?self $parent = null;
 
-    #[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class, cascade: ['remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class, cascade: ['remove'])]
     #[ORM\OrderBy(['date_creation' => 'ASC'])]
     private \Doctrine\Common\Collections\Collection $children;
 
@@ -59,7 +59,7 @@ class Commentaire
     #[Gedmo\TreePath(separator: '/', appendId: true)]
     private ?string $path = null;
 
-    #[ORM\Column(name: 'deleted_at', type: 'datetime', nullable: true)]
+    #[ORM\Column(name: 'deleted_at', type: 'datetimetz_immutable', nullable: true)]
     private ?\DateTimeInterface $deletedAt = null;
 
     /** Nom du fichier audio (enregistrement vocal) dans uploads/comment_audio/ */

@@ -81,7 +81,7 @@ private ?int $contexte = null;
     #[ORM\Column(type: 'datetime', nullable: true)]
     private ?\DateTimeInterface $date_modification = null;
 
-    #[ORM\Column(name: 'deleted_at', type: 'datetime', nullable: true)]
+    #[ORM\Column(name: 'deleted_at', type: 'datetimetz_immutable', nullable: true)]
     private ?\DateTimeInterface $deletedAt = null;
 
     public function getLikes(): int
