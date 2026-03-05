@@ -157,10 +157,11 @@ NoVas/
 | Name | GitHub | Role |
 |------|--------|------|
 | **Elyès Ben Moussa** | [@elyesbm](https://github.com/elyesbm) | Team Lead – User Management & AI Features |
-| *Team Member 2* | — | Publications & Social Feed |
-| *Team Member 3* | — | Career & Job Board |
-| *Team Member 4* | — | Workshops & Ateliers |
-| *Team Member 5* | — | Marketplace & Orders |
+| *Dhouha Haddadi* | — | Publications & Social Feed |
+| *Fares Triki* | — | Career & Job Board |
+| *Mariem Ferchihci* | — | Workshops & Ateliers |
+| *Mohamed Khalil Ben Ezzine * | — | Marketplace & Orders |
+| *Rayen Ben Aissia* | — | learning path |
 
 ---
 
