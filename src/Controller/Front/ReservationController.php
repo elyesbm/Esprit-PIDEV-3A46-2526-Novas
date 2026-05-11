@@ -136,17 +136,22 @@ class ReservationController extends AbstractController
                 'commentaire_reservation' => $reservation->getCommentaireReservation(),
             ];
 
-            if (!$this->sendReservationOtpEmail($mailer, $payload['email_user'], $payload['nom_user'], $atelier, $code)) {
-                $this->addFlash(
-                    'error',
-                    'Impossible d\'envoyer l\'email de verification (service mail indisponible ou IP non autorisee sur Brevo). '
-                    . 'Consultez https://app.brevo.com/security/authorised_ips ou utilisez MAILER_DSN=null://null en developpement dans .env.local.'
-                );
+            $emailSent = $this->sendReservationOtpEmail($mailer, $payload['email_user'], $payload['nom_user'], $atelier, $code);
+            if (!$emailSent) {
+                if ($this->getParameter('kernel.environment') === 'dev') {
+                    $this->addFlash('warning', '[DEV] Email non envoyé (Brevo indisponible). Code OTP de test : <strong>' . $code . '</strong>');
+                } else {
+                    $this->addFlash(
+                        'error',
+                        'Impossible d\'envoyer l\'email de verification (service mail indisponible ou IP non autorisee sur Brevo). '
+                        . 'Consultez https://app.brevo.com/security/authorised_ips ou utilisez MAILER_DSN=null://null en developpement dans .env.local.'
+                    );
 
-                return $this->render('front/reservation/reserver.html.twig', [
-                    'atelier' => $atelier,
-                    'form' => $form->createView(),
-                ]);
+                    return $this->render('front/reservation/reserver.html.twig', [
+                        'atelier' => $atelier,
+                        'form' => $form->createView(),
+                    ]);
+                }
             }
 
             $request->getSession()->set(self::OTP_SESSION_KEY, [
@@ -289,20 +294,25 @@ class ReservationController extends AbstractController
 
         $atelierId = (int) ($payload['atelier_id'] ?? 0);
         $atelier = $atelierId > 0 ? $atelierRepository->find($atelierId) : null;
-        if (!$this->sendReservationOtpEmail(
+        $emailSent = $this->sendReservationOtpEmail(
             $mailer,
             (string) ($payload['email_user'] ?? ''),
             (string) ($payload['nom_user'] ?? 'Utilisateur'),
             $atelier,
             $code
-        )) {
-            $session->set(self::OTP_SESSION_KEY, $previousData);
-            $this->addFlash(
-                'error',
-                'Impossible d\'envoyer l\'email (Brevo : IP non autorisee ou service indisponible). L\'ancien code reste valide si vous l\'avez encore.'
-            );
+        );
+        if (!$emailSent) {
+            if ($this->getParameter('kernel.environment') === 'dev') {
+                $this->addFlash('warning', '[DEV] Email non envoyé (Brevo indisponible). Nouveau code OTP de test : <strong>' . $code . '</strong>');
+            } else {
+                $session->set(self::OTP_SESSION_KEY, $previousData);
+                $this->addFlash(
+                    'error',
+                    'Impossible d\'envoyer l\'email (Brevo : IP non autorisee ou service indisponible). L\'ancien code reste valide si vous l\'avez encore.'
+                );
 
-            return $this->redirectToRoute('app_reservation_verify_code');
+                return $this->redirectToRoute('app_reservation_verify_code');
+            }
         }
 
         $this->addFlash('success', 'Un nouveau code a ete envoye.');
@@ -422,8 +432,10 @@ class ReservationController extends AbstractController
         try {
             $mailer->send($email);
         } catch (TransportExceptionInterface $e) {
+            $previous = $e->getPrevious();
             $this->logger->warning('Envoi email reservation OTP echoue: {message}', [
                 'message' => $e->getMessage(),
+                'previous' => $previous ? $previous->getMessage() : 'n/a',
                 'exception' => $e,
             ]);
 
