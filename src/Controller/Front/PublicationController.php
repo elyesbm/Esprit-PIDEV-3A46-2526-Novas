@@ -77,15 +77,14 @@ class PublicationController extends AbstractController
     /**
      * ✅ User courant OU fallback (1er user en base)
      */
-    private function getCurrentUserOrFallback(UserRepository $userRepo)
+    private function getCurrentUserOrFallback(UserRepository $userRepo): ?User
     {
         $user = $this->getUser();
-
-        if (!$user) {
-            $user = $userRepo->findOneBy([], ['id' => 'ASC']);
+        if ($user instanceof User) {
+            return $user;
         }
 
-        return $user;
+        return $userRepo->findOneBy([], ['id' => 'ASC']);
     }
 
     #[Route('/', name: 'app_publications_index', methods: ['GET'])]
@@ -135,7 +134,7 @@ class PublicationController extends AbstractController
         $publicationsPage = $paginator->paginate($qb, $page, $perPage);
 
         $totalPublications = (int) $publicationsPage->getTotalItemCount();
-        $totalPages = max(1, (int) $publicationsPage->getPageCount());
+        $totalPages = max(1, (int) ceil($totalPublications / $perPage));
         $page = (int) $publicationsPage->getCurrentPageNumber();
 
         $currentUser = $this->getCurrentUserOrFallback($userRepo);
@@ -260,7 +259,7 @@ class PublicationController extends AbstractController
         }
 
         try {
-            $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/publication_images';
+            $uploadDir = $this->projectDir() . '/public/uploads/publication_images';
             if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
                 throw new \RuntimeException('Impossible de creer le dossier des images.');
             }
@@ -421,7 +420,7 @@ class PublicationController extends AbstractController
             return $this->redirectToRoute('app_publications_index');
         }
 
-        if (!$this->isCsrfTokenValid('delete_publication_' . $id, $request->request->get('_token'))) {
+        if (! $this->isCsrfTokenValid('delete_publication_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token invalide.');
             return $this->redirectToRoute('app_publications_index');
         }
@@ -473,7 +472,7 @@ class PublicationController extends AbstractController
             return $this->redirectToRoute('app_publications_supprimees');
         }
 
-        if (!$this->isCsrfTokenValid('restore_publication_' . $id, $request->request->get('_token'))) {
+        if (! $this->isCsrfTokenValid('restore_publication_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token invalide.');
             return $this->redirectToRoute('app_publications_supprimees');
         }
@@ -520,7 +519,7 @@ class PublicationController extends AbstractController
 
             // Si la publication atteint 2 signalements, elle est supprimée automatiquement (soft-delete)
             if (($result['signals'] ?? 0) >= 2) {
-                $pub->setDeletedAt(new \DateTime('now', new \DateTimeZone('Europe/Paris')));
+                $pub->setDeletedAt(new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')));
                 $em->flush();
                 $result['deleted'] = true;
             }
@@ -606,6 +605,9 @@ class PublicationController extends AbstractController
         return $this->json($result);
     }
 
+    /**
+     * @return array{ok: bool, likes: int, signals: int, user_reaction: int}
+     */
     private function applyReaction(
         Publication $pub,
         User $user,
@@ -668,5 +670,15 @@ class PublicationController extends AbstractController
             'signals' => $signals,
             'user_reaction' => $reaction?->getValue() ?? 0,
         ];
+    }
+
+    private function projectDir(): string
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('Invalid kernel.project_dir parameter.');
+        }
+
+        return $projectDir;
     }
 }

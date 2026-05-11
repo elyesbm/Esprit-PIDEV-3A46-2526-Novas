@@ -27,7 +27,7 @@ class TwoFactorAuthService
     public function validateCode(string $secret, string $code): bool
     {
         try {
-            return $this->google2fa->verifyKey($secret, $code);
+            return (bool) $this->google2fa->verifyKey($secret, $code);
         } catch (\Exception $e) {
             return false;
         }
@@ -54,6 +54,8 @@ class TwoFactorAuthService
 
     /**
      * Générer les codes de secours
+     *
+     * @return list<string>
      */
     public function generateBackupCodes(int $count = 10): array
     {
@@ -66,12 +68,16 @@ class TwoFactorAuthService
 
     /**
      * Vérifier et consommer un code de secours
+     *
+     * @param array<int, string> $backupCodes
+     * @param-out array<int, string> $backupCodes
      */
     public function validateBackupCode(array &$backupCodes, string $code): bool
     {
         foreach ($backupCodes as $key => $storedCode) {
             if (hash_equals($storedCode, $code)) {
                 unset($backupCodes[$key]);
+                $backupCodes = array_values($backupCodes);
                 return true;
             }
         }

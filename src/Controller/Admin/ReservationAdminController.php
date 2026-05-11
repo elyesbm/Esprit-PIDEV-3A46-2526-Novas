@@ -16,9 +16,11 @@ class ReservationAdminController extends AbstractController
     #[Route('/', name: 'list')]
     public function list(Request $request, ReservationRepository $reservationRepository): Response
     {
-        $search = $request->query->get('search', '');
+        $searchRaw = $request->query->get('search');
         $statut = $request->query->get('statut');
-        $sort = $request->query->get('sort', 'id_desc');
+        $sortRaw = $request->query->get('sort');
+        $search = is_string($searchRaw) && trim($searchRaw) !== '' ? trim($searchRaw) : null;
+        $sort = is_string($sortRaw) && trim($sortRaw) !== '' ? trim($sortRaw) : 'id_desc';
 
         $statutInt = null;
         if ($statut !== null && $statut !== '') {

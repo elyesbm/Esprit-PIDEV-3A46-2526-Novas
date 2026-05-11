@@ -30,7 +30,7 @@ class SkillMarketStatsService
      */
     public function fetchAndUpdateSkillStats(Skill $skill): ?array
     {
-        $stats = $this->fetchJobCountForKeyword($skill->getNomSkill());
+        $stats = $this->fetchJobCountForKeyword((string) $skill->getNomSkill());
 
         if ($stats === null) {
             return null;
@@ -66,9 +66,9 @@ class SkillMarketStatsService
     /**
      * Appel à l'API Adzuna (France).
      *
-     * @return array{nombre_offres: int, score_demande: int, tendance: string}|null
+     * @return array{nombre_offres: int, score_demande: int, tendance: string}
      */
-    private function fetchFromAdzunaApi(string $keyword): ?array
+    private function fetchFromAdzunaApi(string $keyword): array
     {
         try {
             $url = sprintf(

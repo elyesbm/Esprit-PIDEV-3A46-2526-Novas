@@ -46,6 +46,7 @@ class Skill
     #[ORM\JoinColumn(name: 'createur_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
     private ?User $createur = null;
 
+    /** @var Collection<int, LearningPath> */
     #[ORM\OneToMany(mappedBy: 'skill', targetEntity: LearningPath::class)]
     private Collection $learningPaths;
 
@@ -90,6 +91,7 @@ class Skill
     public function setContexteSkill(string $contexte_skill): static { $this->contexte_skill = $contexte_skill; return $this; }
     public function getCreateur(): ?User { return $this->createur; }
     public function setCreateur(?User $createur): static { $this->createur = $createur; return $this; }
+    /** @return Collection<int, LearningPath> */
     public function getLearningPaths(): Collection { return $this->learningPaths; }
 
     public function getNombreOffresAssociees(): ?int { return $this->nombreOffresAssociees; }

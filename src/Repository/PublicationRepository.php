@@ -27,10 +27,7 @@ class PublicationRepository extends ServiceEntityRepository
     public function findDeletedByAuthor(User $author): array
     {
         $em = $this->getEntityManager();
-        $filter = $em->getFilters()->getFilter('softdeleteable');
-        if ($filter !== null) {
-            $em->getFilters()->disable('softdeleteable');
-        }
+        $em->getFilters()->disable('softdeleteable');
 
         $result = $this->createQueryBuilder('p')
             ->andWhere('p.auteur = :author')
@@ -40,9 +37,7 @@ class PublicationRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
 
-        if ($filter !== null) {
-            $em->getFilters()->enable('softdeleteable');
-        }
+        $em->getFilters()->enable('softdeleteable');
 
         return $result;
     }

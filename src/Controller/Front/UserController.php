@@ -2,6 +2,7 @@
 
 namespace App\Controller\Front;
 
+use App\Entity\User;
 use App\Form\UserType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,8 +17,8 @@ class UserController extends AbstractController
     #[Route('/profile', name: 'app_user_profile')]
     public function profile(): Response
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->redirectToRoute('app_login');
         }
         return $this->render('front/user/profile.html.twig', [
@@ -28,8 +29,8 @@ class UserController extends AbstractController
     #[Route('/update-face', name: 'app_user_update_face', methods: ['POST'])]
     public function updateFace(Request $request, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->json(['error' => 'Non connecté'], 401);
         }
 
@@ -39,13 +40,21 @@ class UserController extends AbstractController
         }
 
         // Validation CSRF
-        if (!$this->isCsrfTokenValid('face_encoding', $data['_csrf_token'] ?? '')) {
+        if (!$this->isCsrfTokenValid('face_encoding', (string) ($data['_csrf_token'] ?? ''))) {
             return $this->json(['error' => 'Token CSRF invalide'], 403);
         }
 
-        $descriptor = $data['descriptor'] ?? null;
-        if (!\is_array($descriptor) || \count($descriptor) !== 128) {
-            return $this->json(['error' => 'Descripteur facial invalide (' . \count((array)$descriptor) . ' valeurs)'], 400);
+        $descriptorRaw = $data['descriptor'] ?? null;
+        if (!\is_array($descriptorRaw) || \count($descriptorRaw) !== 128) {
+            return $this->json(['error' => 'Descripteur facial invalide (' . \count((array) $descriptorRaw) . ' valeurs)'], 400);
+        }
+
+        $descriptor = [];
+        foreach (array_values($descriptorRaw) as $value) {
+            if (!\is_int($value) && !\is_float($value)) {
+                return $this->json(['error' => 'Descripteur facial invalide (valeurs non numeriques)'], 400);
+            }
+            $descriptor[] = (float) $value;
         }
 
         $user->setFaceEncoding($descriptor);
@@ -60,8 +69,8 @@ class UserController extends AbstractController
         EntityManagerInterface $em,
         UserPasswordHasherInterface $passwordHasher
     ): Response {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->redirectToRoute('app_login');
         }
 
@@ -72,7 +81,7 @@ class UserController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $plainPassword = $form->get('plainPassword')->getData();
-            if ($plainPassword) {
+            if (is_string($plainPassword) && $plainPassword !== '') {
                 $hashedPassword = $passwordHasher->hashPassword($user, $plainPassword);
                 $user->setPassword($hashedPassword);
             }
@@ -85,5 +94,11 @@ class UserController extends AbstractController
             'form' => $form,
             'user' => $user,
         ]);
+    }
+
+    private function getAuthenticatedUser(): ?User
+    {
+        $user = $this->getUser();
+        return $user instanceof User ? $user : null;
     }
 }

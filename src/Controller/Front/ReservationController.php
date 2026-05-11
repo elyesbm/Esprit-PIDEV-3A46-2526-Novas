@@ -13,6 +13,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -21,6 +23,11 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/reservation')]
 class ReservationController extends AbstractController
 {
+    public function __construct(
+        private readonly LoggerInterface $logger,
+    ) {
+    }
+
     private const OTP_SESSION_KEY = 'reservation_otp';
     private const OTP_TTL_SECONDS = 600;
     private const OTP_MAX_ATTEMPTS = 5;
@@ -38,7 +45,8 @@ class ReservationController extends AbstractController
             throw $this->createAccessDeniedException('Vous ne pouvez consulter que vos reservations.');
         }
 
-        $search = $request->query->get('search', '');
+        $searchRaw = $request->query->get('search');
+        $search = is_string($searchRaw) && trim($searchRaw) !== '' ? trim($searchRaw) : null;
         $statut = $request->query->get('statut');
 
         $statutInt = null;
@@ -74,7 +82,7 @@ class ReservationController extends AbstractController
             'user' => $user,
             'reservations' => $reservations,
             'historique' => $historique,
-            'search' => $search,
+            'search' => $search ?? '',
             'statut' => $statutInt,
         ]);
     }
@@ -128,14 +136,25 @@ class ReservationController extends AbstractController
                 'commentaire_reservation' => $reservation->getCommentaireReservation(),
             ];
 
+            if (!$this->sendReservationOtpEmail($mailer, $payload['email_user'], $payload['nom_user'], $atelier, $code)) {
+                $this->addFlash(
+                    'error',
+                    'Impossible d\'envoyer l\'email de verification (service mail indisponible ou IP non autorisee sur Brevo). '
+                    . 'Consultez https://app.brevo.com/security/authorised_ips ou utilisez MAILER_DSN=null://null en developpement dans .env.local.'
+                );
+
+                return $this->render('front/reservation/reserver.html.twig', [
+                    'atelier' => $atelier,
+                    'form' => $form->createView(),
+                ]);
+            }
+
             $request->getSession()->set(self::OTP_SESSION_KEY, [
                 'code_hash' => hash('sha256', $code),
                 'expires_at' => time() + self::OTP_TTL_SECONDS,
                 'attempts' => 0,
                 'payload' => $payload,
             ]);
-
-            $this->sendReservationOtpEmail($mailer, $payload['email_user'], $payload['nom_user'], $atelier, $code);
 
             $this->addFlash('info', 'Un code de verification a ete envoye par email.');
             return $this->redirectToRoute('app_reservation_verify_code');
@@ -262,6 +281,7 @@ class ReservationController extends AbstractController
 
         $payload = $data['payload'];
         $code = (string) random_int(100000, 999999);
+        $previousData = $data;
         $data['code_hash'] = hash('sha256', $code);
         $data['expires_at'] = time() + self::OTP_TTL_SECONDS;
         $data['attempts'] = 0;
@@ -269,13 +289,21 @@ class ReservationController extends AbstractController
 
         $atelierId = (int) ($payload['atelier_id'] ?? 0);
         $atelier = $atelierId > 0 ? $atelierRepository->find($atelierId) : null;
-        $this->sendReservationOtpEmail(
+        if (!$this->sendReservationOtpEmail(
             $mailer,
             (string) ($payload['email_user'] ?? ''),
             (string) ($payload['nom_user'] ?? 'Utilisateur'),
             $atelier,
             $code
-        );
+        )) {
+            $session->set(self::OTP_SESSION_KEY, $previousData);
+            $this->addFlash(
+                'error',
+                'Impossible d\'envoyer l\'email (Brevo : IP non autorisee ou service indisponible). L\'ancien code reste valide si vous l\'avez encore.'
+            );
+
+            return $this->redirectToRoute('app_reservation_verify_code');
+        }
 
         $this->addFlash('success', 'Un nouveau code a ete envoye.');
         return $this->redirectToRoute('app_reservation_verify_code');
@@ -330,7 +358,7 @@ class ReservationController extends AbstractController
         }
         $this->assertReservationOwner($reservation, $this->resolveUser($userRepository));
 
-        $token = $request->request->get('_token');
+        $token = (string) $request->request->get('_token');
         if (!$this->isCsrfTokenValid('annuler' . $id, $token)) {
             throw $this->createAccessDeniedException('Token CSRF invalide.');
         }
@@ -342,6 +370,9 @@ class ReservationController extends AbstractController
         return $this->redirectToRoute('app_reservation_mes');
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     */
     private function redirectToReservationStart(array $payload): Response
     {
         $atelierId = (int) ($payload['atelier_id'] ?? 0);
@@ -352,15 +383,18 @@ class ReservationController extends AbstractController
         return $this->redirectToRoute('app_reservation_ateliers');
     }
 
+    /**
+     * @return bool true si l'email a ete accepte par le transporteur, false sinon (sans lever d'exception).
+     */
     private function sendReservationOtpEmail(
         MailerInterface $mailer,
         string $toEmail,
         string $toName,
         ?Atelier $atelier,
         string $code
-    ): void {
+    ): bool {
         if ($toEmail === '') {
-            return;
+            return true;
         }
 
         $fromRaw = $_ENV['MAILER_FROM'] ?? $_SERVER['MAILER_FROM'] ?? (getenv('MAILER_FROM') ?: null);
@@ -385,7 +419,18 @@ class ReservationController extends AbstractController
             ->text($text)
             ->html($html);
 
-        $mailer->send($email);
+        try {
+            $mailer->send($email);
+        } catch (TransportExceptionInterface $e) {
+            $this->logger->warning('Envoi email reservation OTP echoue: {message}', [
+                'message' => $e->getMessage(),
+                'exception' => $e,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 
     private function resolveUser(UserRepository $userRepository): User
@@ -395,7 +440,7 @@ class ReservationController extends AbstractController
             return $securityUser;
         }
 
-        if ($securityUser !== null && method_exists($securityUser, 'getUserIdentifier')) {
+        if ($securityUser !== null) {
             $identifier = $securityUser->getUserIdentifier();
             if ($identifier !== '') {
                 $user = $userRepository->findOneBy(['email' => $identifier]);

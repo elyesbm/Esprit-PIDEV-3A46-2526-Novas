@@ -5,6 +5,7 @@ namespace App\Controller\Front;
 use App\Exception\AiApiException;
 use App\Entity\Offrejob;
 use App\Entity\CandidatureJob;
+use App\Entity\User;
 use App\Enum\OffreCategorie;
 use App\Enum\OffreLieu;
 use App\Enum\ModerationStatus;
@@ -76,11 +77,12 @@ class JobsController extends AbstractController
             $em->flush();
         }
 
-        $user = $this->getUser();
+        $securityUser = $this->getUser();
+        $user = $securityUser instanceof User ? $securityUser : null;
 
         $isAdmin = $this->isGranted('ROLE_ADMIN');
         $isCreateur = false;
-        if ($user && method_exists($user, 'getId') && $offre->getCreateur()?->getId() === $user->getId()) {
+        if ($user && $offre->getCreateur()?->getId() === $user->getId()) {
             $isCreateur = true;
         }
 
@@ -151,9 +153,9 @@ class JobsController extends AbstractController
             return $this->redirectToRoute('front_jobs_detail', ['id' => $offre->getId()]);
         }
 
-        $user = $this->getUser();
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
         if (!$user) {
-            $user = $userRepo->findOneBy([]); // fallback any user
+            $user = $this->resolveCurrentOrFirstUser($userRepo);
             if (!$user) {
                 $this->addFlash('danger', 'Aucun utilisateur trouvÃ© en base. CrÃ©e un user dâ€™abord.');
                 return $this->redirectToRoute('front_jobs_detail', ['id' => $offre->getId()]);
@@ -243,11 +245,7 @@ class JobsController extends AbstractController
         CandidatureJobRepository $repo,
         UserRepository $userRepo
     ): Response {
-        $user = $this->getUser();
-        if (!$user) {
-            $user = $userRepo->findOneBy([]);
-        }
-
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
         $cands = $user
             ? $repo->findBy(['candidat' => $user], ['date_candidature' => 'DESC'])
             : [];
@@ -284,10 +282,6 @@ class JobsController extends AbstractController
         DompdfWrapperInterface $dompdf
     ): Response {
         $user = $this->getUser();
-        if (!$user) {
-            $user = $userRepo->findOneBy([]);
-        }
-
         $cands = $user
             ? $repo->findBy(['candidat' => $user], ['date_candidature' => 'DESC'])
             : [];
@@ -315,13 +309,10 @@ class JobsController extends AbstractController
     #[Route('/jobs/mes-offres', name: 'front_jobs_my_offres', methods: ['GET'])]
     public function myOffres(Request $request, OffrejobRepository $repo, UserRepository $userRepo): Response
     {
-        $user = $this->getUser();
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
         if (!$user) {
-            $user = $userRepo->findOneBy([]);
-            if (!$user) {
                 $this->addFlash('danger', 'Aucun utilisateur trouvÃ© en base. CrÃ©e un user dâ€™abord.');
                 return $this->redirectToRoute('front_jobs_index');
-            }
         }
 
         $q = trim((string) $request->query->get('q', ''));
@@ -393,10 +384,7 @@ class JobsController extends AbstractController
             $errors['global'] = 'Jeton CSRF invalide.';
         }
 
-        $user = $this->getUser();
-        if (!$user) {
-            $user = $userRepo->findOneBy([]); // fallback any user
-        }
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
 
         if (!$user) {
             $errors['global'] = 'Impossible de publier: aucun utilisateur en base (table user vide).';
@@ -502,12 +490,8 @@ class JobsController extends AbstractController
         UserRepository $userRepo,
         AiModerationService $moderationService
     ): Response {
-        $user = $this->getUser();
-        if (!$user) {
-            $user = $userRepo->findOneBy([]);
-        }
-
-        if ($user && $offre->getCreateur()?->getId() !== $user->getId()) {
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
+        if (!$user || $offre->getCreateur()?->getId() !== $user->getId()) {
             throw $this->createAccessDeniedException();
         }
 
@@ -646,12 +630,8 @@ class JobsController extends AbstractController
         EntityManagerInterface $em,
         UserRepository $userRepo
     ): Response {
-        $user = $this->getUser();
-        if (!$user) {
-            $user = $userRepo->findOneBy([]);
-        }
-
-        if ($user && $offre->getCreateur()?->getId() !== $user->getId()) {
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
+        if (!$user || $offre->getCreateur()?->getId() !== $user->getId()) {
             throw $this->createAccessDeniedException();
         }
 
@@ -673,10 +653,7 @@ class JobsController extends AbstractController
         CandidatureJobRepository $repo,
         UserRepository $userRepo
     ): Response {
-        $user = $this->getUser();
-        if (!$user) {
-            $user = $userRepo->findOneBy([]);
-        }
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
 
         if (!$user || $offre->getCreateur()?->getId() !== $user->getId()) {
             throw $this->createAccessDeniedException();
@@ -725,10 +702,7 @@ class JobsController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        $user = $this->getUser();
-        if (!$user) {
-            $user = $userRepo->findOneBy([]);
-        }
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
 
         if (!$user || $cand->getOffre()?->getCreateur()?->getId() !== $user->getId()) {
             throw $this->createAccessDeniedException();
@@ -736,14 +710,27 @@ class JobsController extends AbstractController
 
         if (! $this->isCsrfTokenValid('cand_status_' . $cand->getId() . '_' . $status, (string) $request->request->get('_token'))) {
             $this->addFlash('danger', 'Jeton CSRF invalide.');
-            return $this->redirectToRoute('front_jobs_candidatures', ['id' => $cand->getOffre()->getId()]);
+            $offre = $cand->getOffre();
+            if (! $offre instanceof Offrejob) {
+                return $this->redirectToRoute('front_jobs_my_offres');
+            }
+
+            return $this->redirectToRoute('front_jobs_candidatures', ['id' => $offre->getId()]);
         }
 
         $result = $quotaManager->applyCandidatureStatus($cand, $status);
         $this->addFlash($result['ok'] ? 'success' : 'warning', $result['message']);
-        return $this->redirectToRoute('front_jobs_candidatures', ['id' => $cand->getOffre()->getId()]);
+        $offre = $cand->getOffre();
+        if (! $offre instanceof Offrejob) {
+            return $this->redirectToRoute('front_jobs_my_offres');
+        }
+
+        return $this->redirectToRoute('front_jobs_candidatures', ['id' => $offre->getId()]);
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function categorieOptions(): array
     {
         return [
@@ -753,6 +740,9 @@ class JobsController extends AbstractController
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function lieuOptions(): array
     {
         return [
@@ -761,6 +751,9 @@ class JobsController extends AbstractController
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function statutOptions(): array
     {
         return [
@@ -770,7 +763,10 @@ class JobsController extends AbstractController
         ];
     }
 
-    private function normalizeFilter($value, array $options): ?string
+    /**
+     * @param array<string, string> $options
+     */
+    private function normalizeFilter(mixed $value, array $options): ?string
     {
         $value = is_string($value) ? trim($value) : '';
         if ($value === '' || ! array_key_exists($value, $options)) {
@@ -780,6 +776,10 @@ class JobsController extends AbstractController
         return $value;
     }
 
+    /**
+     * @param array<string, mixed>  $form
+     * @param array<string, string> $errors
+     */
     private function validateJobForm(array $form, array &$errors): void
     {
         if ($form['titre_offre'] === '' || mb_strlen($form['titre_offre']) < 3) {
@@ -859,7 +859,7 @@ class JobsController extends AbstractController
         }
     }
 
-    private function parseNullableFloat($value): ?float
+    private function parseNullableFloat(mixed $value): ?float
     {
         if (!is_string($value) && !is_numeric($value)) {
             return null;
@@ -875,6 +875,17 @@ class JobsController extends AbstractController
         }
 
         return (float) $value;
+    }
+
+    private function resolveCurrentOrFirstUser(UserRepository $userRepo): ?User
+    {
+        $user = $this->getUser();
+        if ($user instanceof User) {
+            return $user;
+        }
+
+        $firstUser = $userRepo->findOneBy([]);
+        return $firstUser instanceof User ? $firstUser : null;
     }
 }
 

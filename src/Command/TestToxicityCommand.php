@@ -42,7 +42,8 @@ class TestToxicityCommand extends Command
         try {
             $scores = $this->toxicityService->getToxicityScores($text);
             $io->section('Scores');
-            $io->writeln(json_encode($scores, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
+            $encoded = json_encode($scores, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
+            $io->writeln(is_string($encoded) ? $encoded : 'Erreur de serialisation JSON.');
 
             $isToxic = $this->toxicityService->isToxic($text);
             $io->section('Résultat');

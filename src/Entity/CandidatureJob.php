@@ -39,7 +39,7 @@ class CandidatureJob
     private ?\DateTimeInterface $date_candidature = null;
 
     #[ORM\ManyToOne(targetEntity: Offrejob::class, inversedBy: 'candidatures')]
-    #[ORM\JoinColumn(name: 'offre_id', referencedColumnName: 'offre_id', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'offre_id', referencedColumnName: 'id_offre', nullable: false, onDelete: 'CASCADE')]
     private ?Offrejob $offre = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'candidatureJobs')]

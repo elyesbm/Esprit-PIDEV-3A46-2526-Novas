@@ -2,8 +2,8 @@
 """
 Génération d'image à partir de texte via Hugging Face Inference Providers.
 
-Modèle : ByteDance/SDXL-Lightning (comme sur huggingface.co)
-Provider par défaut : replicate (recommandé par l'UI HF pour ce modèle)
+Modèle par défaut : Tongyi-MAI/Z-Image-Turbo (fiche HF, provider fal-ai)
+Provider par défaut : fal-ai
 
 Installation : pip install huggingface_hub
 Usage :
@@ -12,8 +12,9 @@ Usage :
 
 Variables d'environnement :
   HF_TOKEN          (obligatoire) Token HF avec permission "Inference Providers"
-  HF_IMAGE_PROVIDER (optionnel)  "replicate" (défaut, recommandé), "hf-inference", "fal-ai", etc.
-  HF_IMAGE_MODEL    (optionnel)  Modèle, défaut: ByteDance/SDXL-Lightning
+  HF_IMAGE_PROVIDER (optionnel)  "fal-ai" (défaut), "replicate", "hf-inference", etc.
+  HF_IMAGE_MODEL    (optionnel)  Modèle, défaut: Tongyi-MAI/Z-Image-Turbo
+  HF_IMAGE_STRICT_PROVIDER (optionnel) "1" pour ne pas remplacer auto/hf-inference sur Z-Image
 
 Sortie : une ligne base64 de l'image PNG sur stdout.
 """
@@ -44,8 +45,14 @@ def main() -> None:
         print("huggingface_hub manquant. Exécuter: pip install huggingface_hub", file=sys.stderr)
         sys.exit(2)
 
-    provider = os.environ.get("HF_IMAGE_PROVIDER", "replicate").strip() or "replicate"
-    model = os.environ.get("HF_IMAGE_MODEL", "ByteDance/SDXL-Lightning").strip() or "ByteDance/SDXL-Lightning"
+    provider = os.environ.get("HF_IMAGE_PROVIDER", "fal-ai").strip() or "fal-ai"
+    model = os.environ.get("HF_IMAGE_MODEL", "Tongyi-MAI/Z-Image-Turbo").strip() or "Tongyi-MAI/Z-Image-Turbo"
+
+    # Avec provider=auto, huggingface_hub choisit le 1er provider du compte HF
+    # (souvent hf-inference) — incompatible avec Z-Image-Turbo sur ce routeur.
+    strict = os.environ.get("HF_IMAGE_STRICT_PROVIDER", "").strip() in ("1", "true", "yes")
+    if not strict and "z-image" in model.lower() and provider in ("auto", "hf-inference"):
+        provider = "fal-ai"
 
     try:
         client = InferenceClient(provider=provider, api_key=token)

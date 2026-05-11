@@ -2,6 +2,8 @@
 
 namespace App\Controller\Front;
 
+use App\Entity\CvProfile;
+use App\Entity\User;
 use App\Service\CvAnalysisService;
 use App\Service\ScoreHistoryService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,8 +20,8 @@ class CvController extends AbstractController
     #[Route('', name: 'app_cv_dashboard')]
     public function dashboard(): Response
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->redirectToRoute('app_login');
         }
 
@@ -35,13 +37,13 @@ class CvController extends AbstractController
     #[Route('/upload', name: 'app_cv_upload', methods: ['POST'])]
     public function upload(Request $request, CvAnalysisService $cvAnalysisService, ScoreHistoryService $scoreHistoryService): Response
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->json(['error' => 'Non connecté'], 401);
         }
 
         // Validation CSRF
-        if (!$this->isCsrfTokenValid('cv_upload', $request->request->get('_csrf_token', ''))) {
+        if (!$this->isCsrfTokenValid('cv_upload', (string) $request->request->get('_csrf_token', ''))) {
             return $this->json(['error' => 'Token invalide'], 403);
         }
 
@@ -63,7 +65,7 @@ class CvController extends AbstractController
         }
 
         // Sauvegarde du fichier
-        $uploadsDir = $this->getParameter('kernel.project_dir') . '/var/cv_uploads';
+        $uploadsDir = $this->projectDir() . '/var/cv_uploads';
         if (!is_dir($uploadsDir)) {
             mkdir($uploadsDir, 0755, true);
         }
@@ -75,7 +77,7 @@ class CvController extends AbstractController
         // Analyse IA
         try {
             // Snapshot de l’ancien profil avant analyse
-            $oldProfile = clone ($user->getCvProfile() ?? new \App\Entity\CvProfile());
+            $oldProfile = clone ($user->getCvProfile() ?? new CvProfile());
             $profile = $cvAnalysisService->analyzeAndStore($user, $filePath, $file->getClientOriginalName());
 
             // 📊 Historique des scores
@@ -90,5 +92,21 @@ class CvController extends AbstractController
         } catch (\Throwable $e) {
             return $this->json(['error' => 'Erreur lors de l\'analyse : ' . $e->getMessage()], 500);
         }
+    }
+
+    private function getAuthenticatedUser(): ?User
+    {
+        $user = $this->getUser();
+        return $user instanceof User ? $user : null;
+    }
+
+    private function projectDir(): string
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('Invalid kernel.project_dir parameter.');
+        }
+
+        return $projectDir;
     }
 }

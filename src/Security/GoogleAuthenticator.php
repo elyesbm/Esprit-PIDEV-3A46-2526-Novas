@@ -21,27 +21,24 @@ use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface
 /**
  * GoogleAuthenticator
  *
- * Gère la connexion / création de compte via Google OAuth 2.0.
- * Si l'utilisateur n'existe pas encore en BD, un compte est créé
- * automatiquement avec le rôle ROLE_USER.
+ * Gere la connexion / creation de compte via Google OAuth 2.0.
  */
-class GoogleAuthenticator extends OAuth2Authenticator implements AuthenticationEntrypointInterface
+class GoogleAuthenticator extends OAuth2Authenticator implements AuthenticationEntryPointInterface
 {
     public function __construct(
-        private ClientRegistry         $clientRegistry,
+        private ClientRegistry $clientRegistry,
         private EntityManagerInterface $em,
-        private RouterInterface        $router,
+        private RouterInterface $router,
     ) {}
 
     public function supports(Request $request): ?bool
     {
-        // Déclenché uniquement sur la route de callback Google
         return $request->attributes->get('_route') === 'connect_google_check';
     }
 
     public function authenticate(Request $request): Passport
     {
-        $client      = $this->clientRegistry->getClient('google');
+        $client = $this->clientRegistry->getClient('google');
         $accessToken = $this->fetchAccessToken($client);
 
         return new SelfValidatingPassport(
@@ -49,27 +46,28 @@ class GoogleAuthenticator extends OAuth2Authenticator implements AuthenticationE
                 /** @var GoogleUser $googleUser */
                 $googleUser = $client->fetchUserFromToken($accessToken);
 
-                $email = $googleUser->getEmail();
+                $email = trim((string) $googleUser->getEmail());
+                if ($email === '') {
+                    throw new AuthenticationException('Email Google introuvable.');
+                }
 
-                // Chercher l'utilisateur existant par e-mail Google
                 $existingUser = $this->em->getRepository(User::class)
                     ->findOneBy(['EMAIL' => $email]);
 
-                if ($existingUser) {
+                if ($existingUser instanceof User) {
                     return $existingUser;
                 }
 
-                // ── Créer un nouveau compte ───────────────────────────────
                 $user = new User();
                 $user->setEMAIL($email);
-                $user->setNOM($googleUser->getLastName()   ?? $googleUser->getName() ?? 'Utilisateur');
-                $user->setPRENOM($googleUser->getFirstName() ?? '');
+                $user->setNOM(trim((string) ($googleUser->getLastName() ?: $googleUser->getName() ?: 'Utilisateur')));
+                $user->setPRENOM(trim((string) ($googleUser->getFirstName() ?: '')));
                 $user->setROLE('ROLE_USER');
-                // Mot de passe vide car connexion OAuth (pas de mot de passe local)
                 $user->setPassword('');
-                // Photo de profil Google
-                if ($googleUser->getAvatar()) {
-                    $user->setIMAGE($googleUser->getAvatar());
+
+                $avatar = $googleUser->getAvatar();
+                if (is_string($avatar) && $avatar !== '') {
+                    $user->setIMAGE($avatar);
                 }
                 $user->setACTIF(true);
 
@@ -83,10 +81,12 @@ class GoogleAuthenticator extends OAuth2Authenticator implements AuthenticationE
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        $user  = $token->getUser();
-        $roles = $user->getRoles();
+        $user = $token->getUser();
+        if (! $user instanceof User) {
+            return new RedirectResponse($this->router->generate('app_login'));
+        }
 
-        if (in_array('ROLE_ADMIN', $roles, true)) {
+        if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
             return new RedirectResponse($this->router->generate('app_admin_dashboard'));
         }
 
@@ -95,17 +95,17 @@ class GoogleAuthenticator extends OAuth2Authenticator implements AuthenticationE
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        $request->getSession()->getFlashBag()->add(
-            'error',
-            'Connexion Google échouée : ' . strtr($exception->getMessageKey(), $exception->getMessageData())
-        );
+        $session = $request->hasSession() ? $request->getSession() : null;
+        if ($session !== null && method_exists($session, 'getFlashBag')) {
+            $session->getFlashBag()->add(
+                'error',
+                'Connexion Google echouee : ' . strtr($exception->getMessageKey(), $exception->getMessageData())
+            );
+        }
 
         return new RedirectResponse($this->router->generate('app_login'));
     }
 
-    /**
-     * Redirige vers la page de login si l'utilisateur n'est pas authentifié.
-     */
     public function start(Request $request, AuthenticationException $authException = null): Response
     {
         return new RedirectResponse($this->router->generate('app_login'));

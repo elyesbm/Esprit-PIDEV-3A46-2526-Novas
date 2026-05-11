@@ -30,9 +30,12 @@ class UserAdminController extends AbstractController
     #[Route('/', name: 'list')]
     public function list(Request $request): Response
     {
-        $roleFilter = $request->query->get('role', '');
-        $searchQ    = $request->query->get('q', '');
-        $sort       = $request->query->get('sort', 'asc');
+        $roleFilterRaw = $request->query->get('role');
+        $searchQRaw    = $request->query->get('q');
+        $sortRaw       = $request->query->get('sort');
+        $roleFilter = is_string($roleFilterRaw) ? trim($roleFilterRaw) : '';
+        $searchQ = is_string($searchQRaw) ? trim($searchQRaw) : '';
+        $sort = is_string($sortRaw) && strtolower($sortRaw) === 'desc' ? 'desc' : 'asc';
         $limit      = 5;
         $page       = max(1, (int) $request->query->get('page', 1));
 
@@ -154,7 +157,7 @@ class UserAdminController extends AbstractController
             throw new NotFoundHttpException('Utilisateur introuvable.');
         }
 
-        if ($this->isCsrfTokenValid('user_delete_' . $id, $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('user_delete_' . $id, (string) $request->request->get('_token'))) {
             $this->em->remove($user);
             $this->em->flush();
             $this->addFlash('success', 'Utilisateur supprimé.');
@@ -176,7 +179,7 @@ class UserAdminController extends AbstractController
             throw new NotFoundHttpException('Utilisateur introuvable.');
         }
 
-        if ($this->isCsrfTokenValid('toggle_active_' . $id, $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('toggle_active_' . $id, (string) $request->request->get('_token'))) {
             $user->setACTIF(!$user->getACTIF());
             $this->em->flush();
             $this->addFlash('success', 'Statut du compte modifié.');
@@ -193,8 +196,10 @@ class UserAdminController extends AbstractController
     #[Route('/export/pdf', name: 'export_pdf')]
     public function exportPdf(Request $request): Response
     {
-        $roleFilter = $request->query->get('role', '');
-        $searchQ    = $request->query->get('q', '');
+        $roleFilterRaw = $request->query->get('role');
+        $searchQRaw    = $request->query->get('q');
+        $roleFilter = is_string($roleFilterRaw) ? trim($roleFilterRaw) : '';
+        $searchQ = is_string($searchQRaw) ? trim($searchQRaw) : '';
 
         if ($searchQ !== '') {
             $users = $this->userRepository->searchByQuery($searchQ);

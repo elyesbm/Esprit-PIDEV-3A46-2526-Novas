@@ -85,11 +85,16 @@ class AiOfferController extends AbstractController
             return true;
         }
 
-        $haystack = strtolower(implode(' ', [
-            $exception->getMessage(),
-            $exception->getProviderResponse() ?? '',
-            $exception->getRawResponse() ?? '',
-        ]));
+        $message = $exception->getMessage();
+        $providerResponse = $exception->getProviderResponse();
+        $rawResponse = $exception->getRawResponse();
+        $providerResponseText = $providerResponse !== null ? json_encode($providerResponse) : '';
+        $rawResponseText = $rawResponse ?? '';
+        $haystack = strtolower(implode(' ', array_filter([
+            $message,
+            $providerResponseText ?: '',
+            $rawResponseText ?: '',
+        ])));
 
         return str_contains($haystack, 'quota')
             || str_contains($haystack, 'rate limit')
@@ -97,6 +102,9 @@ class AiOfferController extends AbstractController
             || str_contains($haystack, 'resource_exhausted');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function buildFallbackResponse(
         AiOfferOptimizerService $optimizerService,
         string $title,

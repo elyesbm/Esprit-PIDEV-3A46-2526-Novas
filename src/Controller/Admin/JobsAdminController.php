@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Exception\AiApiException;
 use App\Entity\Offrejob;
+use App\Entity\User;
 use App\Enum\ModerationStatus;
 use App\Enum\OffreStatut;
 use App\Repository\CandidatureJobRepository;
@@ -219,8 +220,11 @@ class JobsAdminController extends AbstractController
                 return $this->redirectToRoute('app_admin_jobs_new');
             }
 
-            if (($moderation['action'] ?? 'FLAG') === 'BLOCK') {
-                $this->addFlash('danger', 'Offre bloquee par moderation: ' . implode(', ', $moderation['reasons'] ?? []));
+            $moderationAction = $moderation['action'];
+            $moderationReasons = $moderation['reasons'];
+
+            if ($moderationAction === 'BLOCK') {
+                $this->addFlash('danger', 'Offre bloquee par moderation: ' . implode(', ', $moderationReasons));
                 return $this->redirectToRoute('app_admin_jobs_new');
             }
 
@@ -236,13 +240,14 @@ class JobsAdminController extends AbstractController
             $offre->setCapaciteRestante($capaciteMax);
             $offre->setDateCreationOffre(new \DateTime());
             $offre->setDateExpiration($dateExpiration);
-            $offre->setCreateur($this->getUser());
+            $createur = $this->getUser();
+            $offre->setCreateur($createur instanceof User ? $createur : null);
             $offre->setModerationStatus(
-                ($moderation['action'] ?? 'ALLOW') === 'ALLOW'
+                $moderationAction === 'ALLOW'
                     ? ModerationStatus::APPROVED
                     : ModerationStatus::PENDING
             );
-            if (($moderation['action'] ?? 'ALLOW') === 'FLAG') {
+            if ($moderationAction === 'FLAG') {
                 $this->addFlash('warning', 'Offre en attente de moderation.');
             }
 
@@ -326,10 +331,13 @@ class JobsAdminController extends AbstractController
                 return $this->redirectToRoute('app_admin_jobs_edit', ['id' => $offre->getId()]);
             }
 
-            if (($moderation['action'] ?? 'FLAG') === 'BLOCK') {
+            $moderationAction = $moderation['action'];
+            $moderationReasons = $moderation['reasons'];
+
+            if ($moderationAction === 'BLOCK') {
                 $offre->setModerationStatus(ModerationStatus::REJECTED);
                 $em->flush();
-                $this->addFlash('danger', 'Offre bloquee par moderation: ' . implode(', ', $moderation['reasons'] ?? []));
+                $this->addFlash('danger', 'Offre bloquee par moderation: ' . implode(', ', $moderationReasons));
                 return $this->redirectToRoute('app_admin_jobs_edit', ['id' => $offre->getId()]);
             }
 
@@ -350,11 +358,11 @@ class JobsAdminController extends AbstractController
             }
             $offre->setStatutOffre($statut);
             $offre->setModerationStatus(
-                ($moderation['action'] ?? 'ALLOW') === 'ALLOW'
+                $moderationAction === 'ALLOW'
                     ? ModerationStatus::APPROVED
                     : ModerationStatus::PENDING
             );
-            if (($moderation['action'] ?? 'ALLOW') === 'FLAG') {
+            if ($moderationAction === 'FLAG') {
                 $this->addFlash('warning', 'Offre en attente de moderation apres modification.');
             }
 
@@ -444,13 +452,23 @@ class JobsAdminController extends AbstractController
 
         if (! $this->isCsrfTokenValid('cand_status_' . $cand->getId() . '_' . $status, (string) $request->request->get('_token'))) {
             $this->addFlash('danger', 'Jeton CSRF invalide.');
-            return $this->redirectToRoute('app_admin_jobs_candidatures', ['id' => $cand->getOffre()->getId()]);
+            $offre = $cand->getOffre();
+            if (! $offre instanceof Offrejob) {
+                return $this->redirectToRoute('app_admin_jobs_list');
+            }
+
+            return $this->redirectToRoute('app_admin_jobs_candidatures', ['id' => $offre->getId()]);
         }
 
         $result = $quotaManager->applyCandidatureStatus($cand, $status);
         $this->addFlash($result['ok'] ? 'success' : 'warning', $result['message']);
 
-        return $this->redirectToRoute('app_admin_jobs_candidatures', ['id' => $cand->getOffre()->getId()]);
+        $offre = $cand->getOffre();
+        if (! $offre instanceof Offrejob) {
+            return $this->redirectToRoute('app_admin_jobs_list');
+        }
+
+        return $this->redirectToRoute('app_admin_jobs_candidatures', ['id' => $offre->getId()]);
     }
 
     private function countAcceptedCandidatures(Offrejob $offre): int
@@ -478,7 +496,7 @@ class JobsAdminController extends AbstractController
         }
     }
 
-    private function parseNullableFloat($value): ?float
+    private function parseNullableFloat(mixed $value): ?float
     {
         if ($value === null) {
             return null;

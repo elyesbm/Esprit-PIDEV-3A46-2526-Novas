@@ -18,10 +18,13 @@ class AccessDeniedHandler implements AccessDeniedHandlerInterface
 
     public function handle(Request $request, AccessDeniedException $accessDeniedException): ?Response
     {
-        $request->getSession()->getFlashBag()->add(
-            'error',
-            'Vous n\'avez pas les droits nécessaires pour accéder à cette page.'
-        );
+        $session = $request->hasSession() ? $request->getSession() : null;
+        if ($session !== null && method_exists($session, 'getFlashBag')) {
+            $session->getFlashBag()->add(
+                'error',
+                'Vous n\'avez pas les droits necessaires pour acceder a cette page.'
+            );
+        }
 
         return new RedirectResponse($this->urlGenerator->generate('app_home'));
     }

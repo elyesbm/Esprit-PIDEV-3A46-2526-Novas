@@ -3,6 +3,7 @@
 namespace App\Controller\Front;
 
 use App\Entity\Commentaire;
+use App\Entity\User;
 use App\Form\CommentaireType;
 use App\Repository\CommentaireRepository;
 use App\Repository\PublicationRepository;
@@ -35,7 +36,7 @@ class CommentaireController extends AbstractController
         }
 
         // mode démo : connecté OU premier user en base
-        $user = $this->getUser() ?? $userRepo->findOneBy([], ['id' => 'ASC']);
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
         if (!$user) {
             $this->addFlash('error', 'Aucun utilisateur en base.');
             return $this->redirectToRoute('app_publications_index');
@@ -76,7 +77,7 @@ class CommentaireController extends AbstractController
 
             $audioFile = $form->get('audio')->getData();
             if ($audioFile) {
-                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/comment_audio';
+                $uploadDir = $this->projectDir() . '/public/uploads/comment_audio';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
                 }
@@ -105,8 +106,12 @@ class CommentaireController extends AbstractController
         // ✅ message d’erreur détaillé (1er message)
         $firstError = 'Commentaire invalide.';
         foreach ($form->getErrors(true) as $error) {
-            $firstError = $error->getMessage();
-            break;
+            if (method_exists($error, 'getMessage')) {
+                /** @var string $message */
+                $message = $error->getMessage();
+                $firstError = $message;
+                break;
+            }
         }
 
         // ✅ flash ciblé UNIQUEMENT pour cette publication
@@ -136,7 +141,7 @@ class CommentaireController extends AbstractController
         UserRepository $userRepo,
         EntityManagerInterface $em
     ): Response {
-        if (!$this->isCsrfTokenValid('delete_comment_' . $id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('delete_comment_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Jeton de sécurité invalide.');
             return $this->redirectToRoute('app_publications_index');
         }
@@ -148,7 +153,7 @@ class CommentaireController extends AbstractController
         }
 
         // mode démo : connecté OU premier user
-        $user = $this->getUser() ?? $userRepo->findOneBy([], ['id' => 'ASC']);
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
         if (!$user) {
             $this->addFlash('error', 'Aucun utilisateur en base.');
             return $this->redirectToRoute('app_publications_index');
@@ -206,7 +211,7 @@ class CommentaireController extends AbstractController
         }
 
         // mode démo : connecté OU premier user
-        $user = $this->getUser() ?? $userRepo->findOneBy([], ['id' => 'ASC']);
+        $user = $this->resolveCurrentOrFirstUser($userRepo);
         if (!$user) {
             $this->addFlash('error', 'Aucun utilisateur en base.');
             return $this->redirectToRoute('app_publications_index');
@@ -245,5 +250,26 @@ class CommentaireController extends AbstractController
             'form' => $form->createView(),
             'publication' => $pub,
         ]);
+    }
+
+    private function resolveCurrentOrFirstUser(UserRepository $userRepo): ?User
+    {
+        $user = $this->getUser();
+        if ($user instanceof User) {
+            return $user;
+        }
+
+        $firstUser = $userRepo->findOneBy([], ['id' => 'ASC']);
+        return $firstUser instanceof User ? $firstUser : null;
+    }
+
+    private function projectDir(): string
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('Invalid kernel.project_dir parameter.');
+        }
+
+        return $projectDir;
     }
 }

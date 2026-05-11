@@ -14,7 +14,7 @@ class Commentaire
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'comm_id')]
+    #[ORM\Column(name: 'id_comm')]
     #[Gedmo\TreePathSource]
     private ?int $id = null;
 
@@ -33,18 +33,19 @@ class Commentaire
     private ?string $contenu = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'commentaires')]
-    #[ORM\JoinColumn(name: 'auteur_id', referencedColumnName: 'id', nullable: false)]
+    #[ORM\JoinColumn(name: 'id_auteur', referencedColumnName: 'id', nullable: false)]
     private ?User $auteur = null;
 
     #[ORM\ManyToOne(targetEntity: Publication::class, inversedBy: 'commentaires')]
-    #[ORM\JoinColumn(name: 'pub_id', referencedColumnName: 'pub_id', nullable: false)]
+    #[ORM\JoinColumn(name: 'id_pub', referencedColumnName: 'id_pub', nullable: false)]
     private ?Publication $publication = null;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
-    #[ORM\JoinColumn(name: 'parent_id', referencedColumnName: 'comm_id', nullable: true)]
+    #[ORM\JoinColumn(name: 'id_parent', referencedColumnName: 'id_comm', nullable: true)]
     #[Gedmo\TreeParent]
     private ?self $parent = null;
 
+    /** @var \Doctrine\Common\Collections\Collection<int, Commentaire> */
     #[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class, cascade: ['remove'])]
     #[ORM\OrderBy(['date_creation' => 'ASC'])]
     private \Doctrine\Common\Collections\Collection $children;

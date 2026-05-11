@@ -49,7 +49,8 @@ class TestSentimentCommand extends Command
                     '  - Optionnel : HF_SENTIMENT_SCRIPT=scripts/hf_sentiment.py et pip install huggingface_hub'
                 );
             } else {
-                $io->writeln(json_encode($rawScores, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
+                $encoded = json_encode($rawScores, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
+                $io->writeln(is_string($encoded) ? $encoded : 'Erreur de serialisation JSON.');
             }
 
             $stars = $this->sentimentService->analyze($text);

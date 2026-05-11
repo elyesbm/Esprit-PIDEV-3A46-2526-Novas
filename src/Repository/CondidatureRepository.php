@@ -2,18 +2,18 @@
 
 namespace App\Repository;
 
-use App\Entity\Condidature;
+use App\Entity\CondidatureJob;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Condidature>
+ * @extends ServiceEntityRepository<CondidatureJob>
  */
 class CondidatureRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Condidature::class);
+        parent::__construct($registry, CondidatureJob::class);
     }
 
     //    /**

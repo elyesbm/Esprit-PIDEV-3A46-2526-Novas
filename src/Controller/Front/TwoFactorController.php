@@ -26,8 +26,8 @@ class TwoFactorController extends AbstractController
     #[Route('/setup', name: 'app_2fa_setup')]
     public function setup(Request $request): Response
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->redirectToRoute('app_login');
         }
 
@@ -38,7 +38,7 @@ class TwoFactorController extends AbstractController
         if ($request->isMethod('POST')) {
             // Générer une nouvelle clé secrète
             $secret = $this->twoFactorService->generateSecret();
-            $qrCode = $this->twoFactorService->generateQrCode($user->getEMAIL(), $secret);
+            $qrCode = $this->twoFactorService->generateQrCode((string) $user->getEMAIL(), $secret);
             $backupCodes = $this->twoFactorService->generateBackupCodes(10);
 
             // Stocker dans la session pour confirmation
@@ -61,22 +61,30 @@ class TwoFactorController extends AbstractController
     #[Route('/setup-confirm', name: 'app_2fa_setup_confirm', methods: ['POST'])]
     public function setupConfirm(Request $request): Response
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->redirectToRoute('app_login');
         }
 
         $session = $request->getSession();
         $secret = $session->get('2fa_secret');
-        $backupCodes = $session->get('2fa_backup_codes');
+        $backupCodesRaw = $session->get('2fa_backup_codes');
+        $backupCodes = [];
+        if (\is_array($backupCodesRaw)) {
+            foreach ($backupCodesRaw as $backupCode) {
+                if (\is_string($backupCode) && $backupCode !== '') {
+                    $backupCodes[] = $backupCode;
+                }
+            }
+        }
 
-        if (!$secret) {
+        if (!\is_string($secret) || $secret === '') {
             $this->addFlash('error', 'Veuillez d\'abord générer une clé secrète.');
             return $this->redirectToRoute('app_2fa_setup');
         }
 
-        $code = $request->request->get('code');
-        if (!$code || !$this->twoFactorService->validateCode($secret, $code)) {
+        $code = (string) $request->request->get('code', '');
+        if ($code === '' || !$this->twoFactorService->validateCode($secret, $code)) {
             $this->addFlash('error', 'Code invalide. Veuillez réessayer.');
             return $this->redirectToRoute('app_2fa_setup');
         }
@@ -104,15 +112,16 @@ class TwoFactorController extends AbstractController
     #[Route('/disable', name: 'app_2fa_disable', methods: ['POST'])]
     public function disable(Request $request): Response
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $user = $this->getAuthenticatedUser();
+        if ($user === null) {
             return $this->redirectToRoute('app_login');
         }
 
         // Vérifier le mot de passe avant de désactiver
-        if ($request->request->get('password')) {
+        $password = (string) $request->request->get('password', '');
+        if ($password !== '') {
             $passwordHasher = $this->container->get('security.password_hasher');
-            if (!$passwordHasher->isPasswordValid($user, $request->request->get('password'))) {
+            if (!$passwordHasher->isPasswordValid($user, $password)) {
                 $this->addFlash('error', 'Mot de passe incorrect.');
                 return $this->redirectToRoute('app_user_profile');
             }
@@ -143,9 +152,10 @@ class TwoFactorController extends AbstractController
 
         if ($request->isMethod('POST')) {
             // Récupérer le code (TOTP ou backup)
-            $codeInput = $request->request->get('code') ?? $request->request->get('backup_code');
+            $codeInputRaw = $request->request->get('code') ?? $request->request->get('backup_code');
+            $codeInput = \is_string($codeInputRaw) ? trim($codeInputRaw) : '';
             
-            if (!$codeInput) {
+            if ($codeInput === '') {
                 $this->addFlash('error', 'Code requis.');
                 return $this->redirectToRoute('app_2fa_verify');
             }
@@ -154,25 +164,34 @@ class TwoFactorController extends AbstractController
             $userRepo = $this->entityManager->getRepository(User::class);
             $authenticatingUser = $userRepo->find($userPending['id']);
 
-            if (!$authenticatingUser) {
+            if (!$authenticatingUser instanceof User) {
                 return $this->redirectToRoute('app_login');
             }
 
             $isValid = false;
 
             // Valider le code TOTP
-            if (strlen($codeInput) === 6 && ctype_digit($codeInput)) {
-                if ($this->twoFactorService->validateCode($authenticatingUser->getTwoFactorSecret(), $codeInput)) {
+            $secret = $authenticatingUser->getTwoFactorSecret();
+            if (\is_string($secret) && strlen($codeInput) === 6 && ctype_digit($codeInput)) {
+                if ($this->twoFactorService->validateCode($secret, $codeInput)) {
                     $isValid = true;
                 }
             }
 
             // Vérifier les codes de secours
             if (!$isValid) {
-                $backupCodes = $authenticatingUser->getBackupCodes() ?? [];
+                $backupCodesRaw = $authenticatingUser->getBackupCodes();
+                $backupCodes = [];
+                if (\is_array($backupCodesRaw)) {
+                    foreach ($backupCodesRaw as $backupCode) {
+                        if (\is_string($backupCode) && $backupCode !== '') {
+                            $backupCodes[] = $backupCode;
+                        }
+                    }
+                }
                 if ($this->twoFactorService->validateBackupCode($backupCodes, $codeInput)) {
                     $isValid = true;
-                    $authenticatingUser->setBackupCodes($backupCodes);
+                    $authenticatingUser->setBackupCodes(array_values($backupCodes));
                     $this->entityManager->persist($authenticatingUser);
                     $this->entityManager->flush();
                     $this->addFlash('warning', 'Code de secours utilisé. Générez une nouvelle liste si possible.');
@@ -213,5 +232,11 @@ class TwoFactorController extends AbstractController
         }
 
         return $this->redirectToRoute('app_user_profile');
+    }
+
+    private function getAuthenticatedUser(): ?User
+    {
+        $user = $this->getUser();
+        return $user instanceof User ? $user : null;
     }
 }

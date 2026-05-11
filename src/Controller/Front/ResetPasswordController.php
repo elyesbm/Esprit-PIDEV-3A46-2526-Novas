@@ -26,7 +26,7 @@ class ResetPasswordController extends AbstractController
         MailerInterface $mailer
     ): Response {
         if ($request->isMethod('POST')) {
-            $email = trim($request->request->get('email', ''));
+            $email = trim((string) $request->request->get('email', ''));
             $user  = $userRepository->findOneBy(['EMAIL' => $email]);
 
             // Toujours afficher le même message pour ne pas révéler si l'email existe
@@ -43,7 +43,7 @@ class ResetPasswordController extends AbstractController
                 // Envoi du mail
                 $emailMessage = (new Email())
                     ->from(new \Symfony\Component\Mime\Address('maryemf239@gmail.com', 'NOVAS'))
-                    ->to($user->getEMAIL())
+                    ->to((string) $user->getEMAIL())
                     ->subject('NoVas — Réinitialisation de votre mot de passe')
                     ->html($this->renderView('front/auth/reset_password_email.html.twig', [
                         'user'     => $user,
@@ -80,8 +80,8 @@ class ResetPasswordController extends AbstractController
         }
 
         if ($request->isMethod('POST')) {
-            $password  = $request->request->get('password', '');
-            $confirm   = $request->request->get('password_confirm', '');
+            $password  = (string) $request->request->get('password', '');
+            $confirm   = (string) $request->request->get('password_confirm', '');
 
             if (strlen($password) < 8) {
                 $this->addFlash('error', 'Le mot de passe doit contenir au moins 8 caractères.');

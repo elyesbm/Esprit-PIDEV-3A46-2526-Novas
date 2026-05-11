@@ -2,10 +2,10 @@
 
 namespace App\Entity;
 
-use App\Repository\CondidatureJobRepository;
+use App\Repository\CondidatureRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: CondidatureJobRepository::class)]
+#[ORM\Entity(repositoryClass: CondidatureRepository::class)]
 class CondidatureJob
 {
     #[ORM\Id]
@@ -23,7 +23,7 @@ class CondidatureJob
     private ?\DateTimeInterface $date_condidature = null;
 
     #[ORM\ManyToOne(targetEntity: Offrejob::class)]
-    #[ORM\JoinColumn(name: 'offre_id', referencedColumnName: 'offre_id', nullable: false)]
+    #[ORM\JoinColumn(name: 'offre_id', referencedColumnName: 'id_offre', nullable: false)]
     private ?Offrejob $offre = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'condidatureJobs')]

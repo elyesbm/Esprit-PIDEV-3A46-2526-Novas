@@ -6,13 +6,15 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Image generation via Hugging Face Inference providers.
- * - If HF_IMAGE_SCRIPT is configured: uses Python helper script.
- * - Otherwise: uses HTTP API.
+ * - Prefer Python helper (InferenceClient + fal-ai, etc.) when HF_IMAGE_SCRIPT is set
+ *   or when scripts/hf_image.py exists in the project (Tongyi-MAI/Z-Image-Turbo n'est pas
+ *   pris en charge par le routeur HTTP hf-inference seul).
+ * - Sinon : API HTTP router hf-inference (modèles compatibles uniquement).
  */
 class HuggingFaceImageService
 {
     private const DEFAULT_BASE_URL = 'https://router.huggingface.co/hf-inference/models';
-    private const DEFAULT_MODEL = 'ByteDance/SDXL-Lightning';
+    private const DEFAULT_MODEL = 'Tongyi-MAI/Z-Image-Turbo';
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -61,17 +63,28 @@ class HuggingFaceImageService
 
     private function resolveScriptPath(): ?string
     {
+        $candidates = [];
+
         $raw = trim($this->scriptPath ?? '');
-        if ($raw === '') {
-            return null;
+        if ($raw !== '') {
+            $path = $raw;
+            if ($this->projectDir !== '' && !str_starts_with($path, '/') && !preg_match('#^[A-Za-z]:\\\\#', $path)) {
+                $path = rtrim($this->projectDir, '/\\') . \DIRECTORY_SEPARATOR . ltrim($path, '/\\');
+            }
+            $candidates[] = $path;
         }
 
-        $path = $raw;
-        if ($this->projectDir !== '' && !str_starts_with($path, '/') && !preg_match('#^[A-Za-z]:\\\\#', $path)) {
-            $path = rtrim($this->projectDir, '/\\') . \DIRECTORY_SEPARATOR . ltrim($path, '/\\');
+        if ($this->projectDir !== '') {
+            $candidates[] = rtrim($this->projectDir, '/\\') . \DIRECTORY_SEPARATOR . 'scripts' . \DIRECTORY_SEPARATOR . 'hf_image.py';
         }
 
-        return is_file($path) ? $path : null;
+        foreach ($candidates as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -80,13 +93,32 @@ class HuggingFaceImageService
     private function runScript(string $scriptPath, string $prompt): array
     {
         $provider = trim($this->provider ?? '');
-        if ($provider === '') {
-            $provider = 'replicate';
+        if ($provider === '' || strcasecmp($provider, 'auto') === 0) {
+            $provider = 'fal-ai';
         }
 
-        $env = array_merge(getenv(), [
+        $modelId = trim($this->model ?? '') !== '' ? trim($this->model) : self::DEFAULT_MODEL;
+        if (
+            str_contains(strtolower($modelId), 'z-image')
+            && (strcasecmp($provider, 'hf-inference') === 0 || strcasecmp($provider, 'auto') === 0)
+        ) {
+            $provider = 'fal-ai';
+        }
+
+        $baseEnv = [];
+        $fromOs = getenv();
+        if (\is_array($fromOs)) {
+            foreach ($fromOs as $k => $v) {
+                if (!\is_string($k) || $v === false) {
+                    continue;
+                }
+                $baseEnv[$k] = \is_string($v) ? $v : (string) $v;
+            }
+        }
+
+        $env = array_merge($baseEnv, [
             'HF_TOKEN' => $this->hfToken ?? '',
-            'HF_IMAGE_MODEL' => trim($this->model ?? '') !== '' ? trim($this->model) : self::DEFAULT_MODEL,
+            'HF_IMAGE_MODEL' => $modelId,
             'HF_IMAGE_PROVIDER' => $provider,
         ]);
 
@@ -156,12 +188,9 @@ class HuggingFaceImageService
             ? str_replace('{model}', $modelPath, $base)
             : $base . '/' . $modelPath;
 
-        $payload = [
-            'inputs' => $prompt,
-            'parameters' => [
-                'num_inference_steps' => 4,
-            ],
-        ];
+        // Payload minimal : compatible router hf-inference / plusieurs modèles text-to-image.
+        // Pour Tongyi-MAI/Z-Image-Turbo + fal-ai, préférez HF_IMAGE_SCRIPT=scripts/hf_image.py (InferenceClient).
+        $payload = ['inputs' => $prompt];
 
         $response = $this->httpClient->request('POST', $url, [
             'headers' => [
@@ -195,11 +224,18 @@ class HuggingFaceImageService
         if ($status < 200 || $status >= 300) {
             $decoded = json_decode($body, true);
             $msg = is_array($decoded) ? ($decoded['error'] ?? $decoded['message'] ?? json_encode($decoded)) : $body;
+            $msgStr = (string) $msg;
+            $hint = '';
+            if ($status === 400 && str_contains($msgStr, 'not supported by provider hf-inference')) {
+                $hint = ' Ce modele necessite un Inference Provider (ex. fal-ai) : installez Python + huggingface_hub '
+                    . 'et assurez-vous que scripts/hf_image.py est present (ou definissez HF_IMAGE_SCRIPT).';
+            }
             throw new \RuntimeException(sprintf(
-                'Hugging Face API (%s): HTTP %d - %s',
+                'Hugging Face API (%s): HTTP %d - %s%s',
                 $modelId,
                 $status,
-                (string) $msg
+                $msgStr,
+                $hint
             ));
         }
 

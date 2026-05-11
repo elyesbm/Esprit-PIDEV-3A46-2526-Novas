@@ -350,9 +350,9 @@ class SkillAITutorService
         $skillsText = implode("\n", $skillsList);
 
         $userContext = '';
-        if ($user && method_exists($user, 'getSkills')) {
+        if ($user !== null) {
             $userSkills = $user->getSkills();
-            if ($userSkills && $userSkills->count() > 0) {
+            if ($userSkills->count() > 0) {
                 $names = [];
                 foreach ($userSkills as $userSkill) {
                     $names[] = $userSkill->getNomSkill();

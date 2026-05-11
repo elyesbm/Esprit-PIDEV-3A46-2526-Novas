@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Article;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -20,8 +21,8 @@ class ArticleRepository extends ServiceEntityRepository
      * Search articles by a free-text query (id, titre, statut) with optional exact criteria and ordering.
      *
      * @param string|null $q
-     * @param array $criteria
-     * @param array $order
+     * @param array<string, mixed> $criteria
+     * @param array<string, string> $order
      * @return Article[]
      */
     public function search(?string $q, array $criteria = [], array $order = []): array
@@ -31,6 +32,11 @@ class ArticleRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @param array<string, mixed> $criteria
+     * @param array<string, string> $order
+     * @return Article[]
+     */
     public function searchPaginated(?string $q, array $criteria = [], array $order = [], int $limit = 12, int $offset = 0): array
     {
         $limit = max(1, $limit);
@@ -43,6 +49,9 @@ class ArticleRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @param array<string, mixed> $criteria
+     */
     public function countSearch(?string $q, array $criteria = []): int
     {
         $qb = $this->createQueryBuilder('a')
@@ -74,7 +83,11 @@ class ArticleRepository extends ServiceEntityRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    private function buildSearchQueryBuilder(?string $q, array $criteria = [], array $order = [])
+    /**
+     * @param array<string, mixed> $criteria
+     * @param array<string, string> $order
+     */
+    private function buildSearchQueryBuilder(?string $q, array $criteria = [], array $order = []): QueryBuilder
     {
         $qb = $this->createQueryBuilder('a');
 

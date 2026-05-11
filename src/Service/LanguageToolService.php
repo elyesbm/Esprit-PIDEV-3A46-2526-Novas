@@ -54,18 +54,12 @@ class LanguageToolService
 
         if ($status >= 400) {
             $message = 'LanguageTool indisponible.';
-            if (is_array($payload)) {
-                $apiMessage = $payload['message'] ?? $payload['error'] ?? null;
-                if (is_string($apiMessage) && trim($apiMessage) !== '') {
-                    $message = trim($apiMessage);
-                }
+            $apiMessage = $payload['message'] ?? $payload['error'] ?? null;
+            if (is_string($apiMessage) && trim($apiMessage) !== '') {
+                $message = trim($apiMessage);
             }
 
             throw new \RuntimeException($message);
-        }
-
-        if (!is_array($payload)) {
-            throw new \RuntimeException('Reponse LanguageTool invalide.');
         }
 
         $rawMatches = $payload['matches'] ?? [];

@@ -15,7 +15,7 @@ class Publication
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'pub_id')]
+    #[ORM\Column(name: 'id_pub')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -61,9 +61,10 @@ class Publication
 private ?int $contexte = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'publications')]
-    #[ORM\JoinColumn(name: 'auteur_id', referencedColumnName: 'id', nullable: false)]
+    #[ORM\JoinColumn(name: 'id_auteur', referencedColumnName: 'id', nullable: false)]
     private ?User $auteur = null;
 
+    /** @var Collection<int, Commentaire> */
     #[ORM\OneToMany(mappedBy: 'publication', targetEntity: Commentaire::class, cascade: ['remove'], orphanRemoval: true)]
     private Collection $commentaires;
 
@@ -169,5 +170,6 @@ private ?int $contexte = null;
     public function setContexte(?int $contexte): static { $this->contexte = $contexte; return $this; }
     public function getAuteur(): ?User { return $this->auteur; }
     public function setAuteur(?User $auteur): static { $this->auteur = $auteur; return $this; }
+    /** @return Collection<int, Commentaire> */
     public function getCommentaires(): Collection { return $this->commentaires; }
 }

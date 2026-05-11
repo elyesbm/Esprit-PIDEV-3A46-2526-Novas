@@ -274,11 +274,15 @@ PROMPT;
             return true;
         }
 
-        $haystack = strtolower(implode(' ', [
+        $providerResponse = $exception->getProviderResponse();
+        $rawResponse = $exception->getRawResponse();
+        $providerResponseText = $providerResponse !== null ? json_encode($providerResponse) : '';
+        $rawResponseText = $rawResponse ?? '';
+        $haystack = strtolower(implode(' ', array_filter([
             $exception->getMessage(),
-            $exception->getProviderResponse() ?? '',
-            $exception->getRawResponse() ?? '',
-        ]));
+            $providerResponseText ?: '',
+            $rawResponseText ?: '',
+        ])));
 
         return str_contains($haystack, 'quota')
             || str_contains($haystack, 'resource_exhausted')

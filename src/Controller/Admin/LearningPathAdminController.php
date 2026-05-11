@@ -85,7 +85,7 @@ class LearningPathAdminController extends AbstractController
             return $this->redirectToRoute('app_admin_skills_list');
         }
 
-        $token = $request->request->get('_token');
+        $token = (string) $request->request->get('_token');
         if (!$this->isCsrfTokenValid('delete_learning_path_' . $id, $token)) {
             $this->addFlash('error', 'Token de sécurité invalide.');
             return $this->redirectToRoute('app_admin_skills_list');
@@ -125,7 +125,7 @@ class LearningPathAdminController extends AbstractController
     #[Route('/generate/preview', name: 'generate_preview', methods: ['POST'])]
     public function generatePreview(Request $request): Response
     {
-        if (!$this->isCsrfTokenValid('ai_generate_lp', $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('ai_generate_lp', (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token invalide.');
             return $this->redirectToRoute('app_admin_learning_path_generate');
         }
@@ -191,7 +191,7 @@ class LearningPathAdminController extends AbstractController
     #[Route('/generate/save', name: 'generate_save', methods: ['POST'])]
     public function generateSave(Request $request): Response
     {
-        if (!$this->isCsrfTokenValid('ai_save_lp', $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('ai_save_lp', (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token invalide.');
             return $this->redirectToRoute('app_admin_learning_path_generate');
         }

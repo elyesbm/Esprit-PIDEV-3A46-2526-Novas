@@ -12,6 +12,7 @@ use Symfony\Component\Security\Core\Security;
 
 class RequireTwoFactorListener implements EventSubscriberInterface
 {
+    /** @var list<string> */
     private array $whitelist = [
         'app_login',
         'app_login_face',
@@ -41,33 +42,31 @@ class RequireTwoFactorListener implements EventSubscriberInterface
 
     public function onKernelRequest(RequestEvent $event): void
     {
-        if (!$event->isMainRequest()) {
+        if (! $event->isMainRequest()) {
             return;
         }
 
         $request = $event->getRequest();
         $currentRoute = $request->attributes->get('_route');
 
-        // Ne pas vérifier les routes en whitelist
         if (in_array($currentRoute, $this->whitelist, true)) {
             return;
         }
 
-        // Vérifier si l'utilisateur est connecté
         $user = $this->security->getUser();
-        if (!($user instanceof User)) {
-            return; // Pas connecté, ignorer
+        if (! ($user instanceof User)) {
+            return;
         }
 
-        // Si l'utilisateur n'a pas activé la 2FA, le rediriger
-        if (!$user->isTwoFactorEnabled()) {
+        if (! $user->isTwoFactorEnabled()) {
             $url = $this->router->generate('app_2fa_setup');
-            
-            // Affichage du message flash
-            $request->getSession()->getFlashBag()->add(
-                'warning',
-                'Veuillez activer l\'authentification à deux facteurs pour continuer.'
-            );
+            $session = $request->hasSession() ? $request->getSession() : null;
+            if ($session !== null && method_exists($session, 'getFlashBag')) {
+                $session->getFlashBag()->add(
+                    'warning',
+                    'Veuillez activer l\'authentification a deux facteurs pour continuer.'
+                );
+            }
 
             $event->setResponse(new RedirectResponse($url));
         }

@@ -3,6 +3,7 @@
 namespace App\Controller\Front;
 
 use App\Entity\Skill;
+use App\Entity\User;
 use App\Form\SkillType;
 use App\Repository\SkillRepository;
 use App\Repository\UserRepository;
@@ -19,12 +20,12 @@ use Symfony\Component\Routing\Attribute\Route;
 class SkillController extends AbstractController
 {
     public function __construct(
-        private SkillRepository      $skillRepository,
-        private UserRepository       $userRepository,
+        private SkillRepository $skillRepository,
+        private UserRepository $userRepository,
         private EntityManagerInterface $entityManager,
-        private ScoreHistoryService  $scoreHistoryService,
+        private ScoreHistoryService $scoreHistoryService,
         private SkillAITutorService $aiTutorService,
-        private PaginatorInterface  $paginator,
+        private PaginatorInterface $paginator,
     ) {
     }
 
@@ -63,8 +64,9 @@ class SkillController extends AbstractController
 
         $availableSkills = $this->skillRepository->findBy([], ['nom_skill' => 'ASC']);
         $user = $this->getUser();
+        $currentUser = $user instanceof User ? $user : null;
 
-        $reply = $this->aiTutorService->chat($userMessage, $messages, $availableSkills, $user);
+        $reply = $this->aiTutorService->chat($userMessage, $messages, $availableSkills, $currentUser);
 
         return $this->json(['reply' => $reply]);
     }
@@ -72,9 +74,12 @@ class SkillController extends AbstractController
     #[Route('/', name: 'app_skills_index')]
     public function index(Request $request): Response
     {
-        $q = $request->query->get('q');
-        $type = $request->query->get('type');
-        $categorie = $request->query->get('categorie');
+        $qRaw = $request->query->get('q');
+        $typeRaw = $request->query->get('type');
+        $categorieRaw = $request->query->get('categorie');
+        $q = is_string($qRaw) && trim($qRaw) !== '' ? trim($qRaw) : null;
+        $type = is_string($typeRaw) && trim($typeRaw) !== '' ? trim($typeRaw) : null;
+        $categorie = is_string($categorieRaw) && trim($categorieRaw) !== '' ? trim($categorieRaw) : null;
 
         $page = max(1, (int) $request->query->get('page', 1));
         $queryBuilder = $this->skillRepository->searchAndFilterQueryBuilder($q, $type, $categorie);
@@ -122,11 +127,11 @@ class SkillController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->persist($skill);
-            $this->entityManager->flush();
+                $this->entityManager->flush();
 
             // 📊 Enregistrement historique des scores
             try {
-                $this->scoreHistoryService->recordSkillAdded($user, $skill->getNomSkill());
+                $this->scoreHistoryService->recordSkillAdded($user, (string) ($skill->getNomSkill() ?? ''));
             } catch (\Throwable) { /* non-bloquant */ }
 
             $this->addFlash('success', 'Skill ajouté avec succès !');
@@ -193,7 +198,7 @@ class SkillController extends AbstractController
             return $this->redirectToRoute('app_skills_mes');
         }
 
-        $token = $request->request->get('_token');
+        $token = (string) $request->request->get('_token');
         if (!$this->isCsrfTokenValid('delete_skill_' . $id, $token)) {
             $this->addFlash('error', 'Token de sécurité invalide.');
             return $this->redirectToRoute('app_skills_mes');
@@ -209,10 +214,10 @@ class SkillController extends AbstractController
     /**
      * Retourne l'utilisateur connecté ou le premier utilisateur en BDD (pour dev sans auth).
      */
-    private function getUserOrFirst(): ?object
+    private function getUserOrFirst(): ?User
     {
         $user = $this->getUser();
-        if ($user !== null) {
+        if ($user instanceof User) {
             return $user;
         }
         return $this->userRepository->findOneBy([], ['id' => 'ASC']);

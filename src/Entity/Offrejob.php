@@ -19,7 +19,7 @@ class Offrejob
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'offre_id')]
+    #[ORM\Column(name: 'id_offre')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -85,6 +85,7 @@ class Offrejob
     #[ORM\JoinColumn(name: 'createur_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?User $createur = null;
 
+    /** @var Collection<int, CandidatureJob> */
     #[ORM\OneToMany(mappedBy: 'offre', targetEntity: CandidatureJob::class)]
     private Collection $candidatures;
 
@@ -229,6 +230,7 @@ class Offrejob
     public function setDateCreationOffre(\DateTimeInterface $date_creation_offre): static { $this->date_creation_offre = $date_creation_offre; return $this; }
     public function getCreateur(): ?User { return $this->createur; }
     public function setCreateur(?User $createur): static { $this->createur = $createur; return $this; }
+    /** @return Collection<int, CandidatureJob> */
     public function getCandidatures(): Collection { return $this->candidatures; }
 
     #[Assert\Callback]

@@ -27,19 +27,25 @@ class SkillAdminController extends AbstractController
     #[Route('/', name: 'list')]
     public function list(Request $request): Response
     {
-        $q = $request->query->get('q');
-        $type = $request->query->get('type');
-        $categorie = $request->query->get('categorie');
+        $qRaw = $request->query->get('q');
+        $typeRaw = $request->query->get('type');
+        $categorieRaw = $request->query->get('categorie');
+        $qPathRaw = $request->query->get('q_path');
+        $niveauPathRaw = $request->query->get('niveau_path');
+        $statutPathRaw = $request->query->get('statut_path');
 
-        $qPath = $request->query->get('q_path');
-        $niveauPath = $request->query->get('niveau_path');
-        $statutPath = $request->query->get('statut_path');
+        $q = is_string($qRaw) && trim($qRaw) !== '' ? trim($qRaw) : null;
+        $type = is_string($typeRaw) && trim($typeRaw) !== '' ? trim($typeRaw) : null;
+        $categorie = is_string($categorieRaw) && trim($categorieRaw) !== '' ? trim($categorieRaw) : null;
+        $qPath = is_string($qPathRaw) && trim($qPathRaw) !== '' ? trim($qPathRaw) : null;
+        $niveauPath = is_string($niveauPathRaw) && trim($niveauPathRaw) !== '' ? (int) $niveauPathRaw : null;
+        $statutPath = is_string($statutPathRaw) && trim($statutPathRaw) !== '' ? (int) $statutPathRaw : null;
 
         $skills = $this->skillRepository->searchAndFilter($q, $type, $categorie);
         $learningPaths = $this->learningPathRepository->searchAndFilter(
-            $qPath ?: null,
-            $niveauPath !== '' && $niveauPath !== null ? (int) $niveauPath : null,
-            $statutPath !== '' && $statutPath !== null ? (int) $statutPath : null
+            $qPath,
+            $niveauPath,
+            $statutPath
         );
         $totalSkills = $this->skillRepository->count([]);
         $totalPaths = $this->learningPathRepository->count([]);
@@ -65,8 +71,8 @@ class SkillAdminController extends AbstractController
             'search_type' => $type,
             'search_categorie' => $categorie,
             'search_q_path' => $qPath,
-            'search_niveau_path' => $request->query->get('niveau_path'),
-            'search_statut_path' => $request->query->get('statut_path'),
+            'search_niveau_path' => $niveauPath,
+            'search_statut_path' => $statutPath,
         ]);
     }
 
@@ -176,7 +182,7 @@ class SkillAdminController extends AbstractController
             return $this->redirectToRoute('app_admin_skills_list');
         }
 
-        $token = $request->request->get('_token');
+        $token = (string) $request->request->get('_token');
         if (!$this->isCsrfTokenValid('delete_skill_' . $id, $token)) {
             $this->addFlash('error', 'Token de sécurité invalide.');
             return $this->redirectToRoute('app_admin_skills_list');

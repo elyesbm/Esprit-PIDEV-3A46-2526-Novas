@@ -22,6 +22,8 @@ class FaceRecognitionService
 
     /**
      * Trouve l'utilisateur dont l'encodage facial correspond au descripteur fourni.
+     *
+     * @param list<float|int> $descriptor
      */
     public function findUserByDescriptor(array $descriptor): ?User
     {
@@ -50,7 +52,12 @@ class FaceRecognitionService
         return $bestUser;
     }
 
-    /** Force un tableau indexé 0..127 de floats (JSON/DB peuvent donner des clés string). */
+    /**
+     * Force un tableau indexé 0..127 de floats (JSON/DB peuvent donner des clés string).
+     *
+     * @param array<int|string, float|int>|null $descriptor
+     * @return list<float>|null
+     */
     private function normalizeDescriptor(?array $descriptor): ?array
     {
         if ($descriptor === null || \count($descriptor) !== 128) {
@@ -60,9 +67,13 @@ class FaceRecognitionService
         for ($i = 0; $i < 128; $i++) {
             $out[$i] = (float) ($descriptor[$i] ?? $descriptor[(string) $i] ?? 0);
         }
-        return $out;
+        return array_values($out);
     }
 
+    /**
+     * @param list<float> $a
+     * @param list<float> $b
+     */
     private function euclideanDistance(array $a, array $b): float
     {
         $sum = 0.0;

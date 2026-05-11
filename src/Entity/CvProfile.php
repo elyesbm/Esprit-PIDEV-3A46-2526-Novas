@@ -46,22 +46,27 @@ class CvProfile
     private ?string $mainDomain = null;
 
     /** Compétences techniques extraites */
+    /** @var list<string>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $technicalSkills = null;
 
     /** Soft skills extraits */
+    /** @var list<string>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $softSkills = null;
 
     /** Points faibles identifiés */
+    /** @var list<string>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $weakPoints = null;
 
     /** Recommandations personnalisées */
+    /** @var list<string>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $recommendations = null;
 
     /** Simulation d'évolution : [scenario => score_prédit] */
+    /** @var array<string, float|int>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $evolutionSimulation = null;
 
@@ -70,6 +75,7 @@ class CvProfile
     private ?string $aiSummary = null;
 
     /** Analyse brute complète de l'IA (stockage JSON) */
+    /** @var array<string, mixed>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $rawAnalysis = null;
 
@@ -104,25 +110,153 @@ class CvProfile
     public function getMainDomain(): ?string { return $this->mainDomain; }
     public function setMainDomain(?string $mainDomain): static { $this->mainDomain = $mainDomain; return $this; }
 
-    public function getTechnicalSkills(): ?array { return $this->technicalSkills; }
-    public function setTechnicalSkills(?array $technicalSkills): static { $this->technicalSkills = $technicalSkills; return $this; }
+    /** @return list<string>|null */
+    public function getTechnicalSkills(): ?array
+    {
+        if ($this->technicalSkills === null) {
+            return null;
+        }
 
-    public function getSoftSkills(): ?array { return $this->softSkills; }
-    public function setSoftSkills(?array $softSkills): static { $this->softSkills = $softSkills; return $this; }
+        $skills = [];
+        foreach ($this->technicalSkills as $skill) {
+            if (\is_string($skill) && $skill !== '') {
+                $skills[] = $skill;
+            }
+        }
 
-    public function getWeakPoints(): ?array { return $this->weakPoints; }
-    public function setWeakPoints(?array $weakPoints): static { $this->weakPoints = $weakPoints; return $this; }
+        return $skills;
+    }
+    /** @param list<string>|null $technicalSkills */
+    public function setTechnicalSkills(?array $technicalSkills): static
+    {
+        if ($technicalSkills === null) {
+            $this->technicalSkills = null;
+            return $this;
+        }
 
-    public function getRecommendations(): ?array { return $this->recommendations; }
-    public function setRecommendations(?array $recommendations): static { $this->recommendations = $recommendations; return $this; }
+        $skills = [];
+        foreach (array_values($technicalSkills) as $skill) {
+            if (\is_string($skill) && $skill !== '') {
+                $skills[] = $skill;
+            }
+        }
+        $this->technicalSkills = $skills;
+        return $this;
+    }
 
+    /** @return list<string>|null */
+    public function getSoftSkills(): ?array
+    {
+        if ($this->softSkills === null) {
+            return null;
+        }
+
+        $skills = [];
+        foreach ($this->softSkills as $skill) {
+            if (\is_string($skill) && $skill !== '') {
+                $skills[] = $skill;
+            }
+        }
+
+        return $skills;
+    }
+    /** @param list<string>|null $softSkills */
+    public function setSoftSkills(?array $softSkills): static
+    {
+        if ($softSkills === null) {
+            $this->softSkills = null;
+            return $this;
+        }
+
+        $skills = [];
+        foreach (array_values($softSkills) as $skill) {
+            if (\is_string($skill) && $skill !== '') {
+                $skills[] = $skill;
+            }
+        }
+        $this->softSkills = $skills;
+        return $this;
+    }
+
+    /** @return list<string>|null */
+    public function getWeakPoints(): ?array
+    {
+        if ($this->weakPoints === null) {
+            return null;
+        }
+
+        $points = [];
+        foreach ($this->weakPoints as $point) {
+            if (\is_string($point) && $point !== '') {
+                $points[] = $point;
+            }
+        }
+
+        return $points;
+    }
+    /** @param list<string>|null $weakPoints */
+    public function setWeakPoints(?array $weakPoints): static
+    {
+        if ($weakPoints === null) {
+            $this->weakPoints = null;
+            return $this;
+        }
+
+        $points = [];
+        foreach (array_values($weakPoints) as $point) {
+            if (\is_string($point) && $point !== '') {
+                $points[] = $point;
+            }
+        }
+        $this->weakPoints = $points;
+        return $this;
+    }
+
+    /** @return list<string>|null */
+    public function getRecommendations(): ?array
+    {
+        if ($this->recommendations === null) {
+            return null;
+        }
+
+        $recommendations = [];
+        foreach ($this->recommendations as $recommendation) {
+            if (\is_string($recommendation) && $recommendation !== '') {
+                $recommendations[] = $recommendation;
+            }
+        }
+
+        return $recommendations;
+    }
+    /** @param list<string>|null $recommendations */
+    public function setRecommendations(?array $recommendations): static
+    {
+        if ($recommendations === null) {
+            $this->recommendations = null;
+            return $this;
+        }
+
+        $items = [];
+        foreach (array_values($recommendations) as $recommendation) {
+            if (\is_string($recommendation) && $recommendation !== '') {
+                $items[] = $recommendation;
+            }
+        }
+        $this->recommendations = $items;
+        return $this;
+    }
+
+    /** @return array<string, float|int>|null */
     public function getEvolutionSimulation(): ?array { return $this->evolutionSimulation; }
+    /** @param array<string, float|int>|null $evolutionSimulation */
     public function setEvolutionSimulation(?array $evolutionSimulation): static { $this->evolutionSimulation = $evolutionSimulation; return $this; }
 
     public function getAiSummary(): ?string { return $this->aiSummary; }
     public function setAiSummary(?string $aiSummary): static { $this->aiSummary = $aiSummary; return $this; }
 
+    /** @return array<string, mixed>|null */
     public function getRawAnalysis(): ?array { return $this->rawAnalysis; }
+    /** @param array<string, mixed>|null $rawAnalysis */
     public function setRawAnalysis(?array $rawAnalysis): static { $this->rawAnalysis = $rawAnalysis; return $this; }
 
     public function getAnalyzedAt(): ?\DateTimeInterface { return $this->analyzedAt; }

@@ -40,7 +40,20 @@ class ScoreHistoryRepository extends ServiceEntityRepository
         ";
 
         $conn = $this->getEntityManager()->getConnection();
-        return $conn->fetchAllAssociative($sql, ['since' => $since]);
+        $rows = $conn->fetchAllAssociative($sql, ['since' => $since]);
+
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'day' => (string) ($row['day'] ?? ''),
+                'avg_cv' => (float) ($row['avg_cv'] ?? 0.0),
+                'avg_maturity' => (float) ($row['avg_maturity'] ?? 0.0),
+                'avg_competitiveness' => (float) ($row['avg_competitiveness'] ?? 0.0),
+                'events' => (int) ($row['events'] ?? 0),
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -61,6 +74,13 @@ class ScoreHistoryRepository extends ServiceEntityRepository
 
     /**
      * Statistiques globales : total events, progression moyenne, top acteur, répartition par action.
+     *
+     * @return array{
+     *   total_events: int,
+     *   avg_delta: float,
+     *   top_user: array<string, mixed>|null,
+     *   by_action: list<array{actionType: string, cnt: int}>
+     * }
      */
     public function getGlobalStats(int $days = 7): array
     {
@@ -88,13 +108,21 @@ class ScoreHistoryRepository extends ServiceEntityRepository
         ", ['since' => $since]);
 
         // Répartition par type d'action
-        $byAction = $conn->fetchAllAssociative("
+        $byActionRows = $conn->fetchAllAssociative("
             SELECT action_type AS actionType, COUNT(id) AS cnt
             FROM score_history
             WHERE recorded_at >= :since
             GROUP BY action_type
             ORDER BY cnt DESC
         ", ['since' => $since]);
+
+        $byAction = [];
+        foreach ($byActionRows as $row) {
+            $byAction[] = [
+                'actionType' => (string) ($row['actionType'] ?? ''),
+                'cnt' => (int) ($row['cnt'] ?? 0),
+            ];
+        }
 
         return [
             'total_events' => (int)   ($total['total_events'] ?? 0),

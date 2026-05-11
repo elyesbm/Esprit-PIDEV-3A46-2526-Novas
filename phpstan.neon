@@ -1,0 +1,8 @@
+parameters:
+    level: 8
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    paths:
+        - src
+    ignoreErrors:
+        - identifier: property.unusedType

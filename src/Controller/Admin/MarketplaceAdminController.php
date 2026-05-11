@@ -105,7 +105,7 @@ class MarketplaceAdminController extends AbstractController
         $categoryMostFilled = $categoryArticleStats[0] ?? null;
         $categoryEmptyCount = count(array_filter(
             $categoryArticleStats,
-            static fn (array $item): bool => ((int) ($item['article_count'] ?? 0)) === 0
+            static fn (array $item): bool => (int) $item['article_count'] === 0
         ));
 
         $popularArticlesRows = $articleRepository->createQueryBuilder('a')
@@ -407,8 +407,8 @@ class MarketplaceAdminController extends AbstractController
                         return $this->redirectToRoute('app_admin_marketplace_new');
                     }
 
-                    $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/images';
-                    $newFilename = uniqid('article_', true) . '.' . ($ext ?: 'jpg');
+                    $uploadsDir = $this->projectDir() . '/public/images';
+                    $newFilename = uniqid('article_', true) . '.' . $ext;
                     try {
                         $uploadedFile->move($uploadsDir, $newFilename);
                         $data['image_article'] = $newFilename;
@@ -542,8 +542,8 @@ class MarketplaceAdminController extends AbstractController
                         return $this->redirectToRoute('app_admin_marketplace_edit', ['id' => $id]);
                     }
 
-                    $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/images';
-                    $newFilename = uniqid('article_', true) . '.' . ($ext ?: 'jpg');
+                    $uploadsDir = $this->projectDir() . '/public/images';
+                    $newFilename = uniqid('article_', true) . '.' . $ext;
                     try {
                         $uploadedFile->move($uploadsDir, $newFilename);
                         $data['image_article'] = $newFilename;
@@ -711,5 +711,15 @@ class MarketplaceAdminController extends AbstractController
         }
 
         return $this->redirectToRoute('app_admin_marketplace_list', ['tab' => 'categories']);
+    }
+
+    private function projectDir(): string
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('Invalid kernel.project_dir parameter.');
+        }
+
+        return $projectDir;
     }
 }

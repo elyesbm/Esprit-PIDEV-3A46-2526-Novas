@@ -28,7 +28,7 @@ parameters:
     app.image.model: '%env(default::HF_IMAGE_MODEL)%'
     app.image.base_url: '%env(default::HF_IMAGE_BASE_URL)%'
     app.image.script_path: '%env(default::HF_IMAGE_SCRIPT)%'
-    hf_image_default_provider: 'replicate'
+    hf_image_default_provider: 'fal-ai'
     app.image.provider: '%env(default:hf_image_default_provider:HF_IMAGE_PROVIDER)%'
 
 services:

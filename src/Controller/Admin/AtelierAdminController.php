@@ -20,9 +20,11 @@ class AtelierAdminController extends AbstractController
     #[Route('/', name: 'list')]
     public function list(Request $request, AtelierRepository $atelierRepository, ReservationRepository $reservationRepository): Response
     {
-        $search = $request->query->get('search', '');
+        $searchRaw = $request->query->get('search');
         $contexte = $request->query->get('contexte');
-        $sort = $request->query->get('sort', 'id_desc');
+        $sortRaw = $request->query->get('sort');
+        $search = is_string($searchRaw) && trim($searchRaw) !== '' ? trim($searchRaw) : null;
+        $sort = is_string($sortRaw) && trim($sortRaw) !== '' ? trim($sortRaw) : 'id_desc';
 
         // Robust contexte parsing to avoid implicit cast issues
         // (e.g. 'hard' previously became 0 with (int) cast).
@@ -135,7 +137,7 @@ class AtelierAdminController extends AbstractController
             throw $this->createNotFoundException('Atelier introuvable.');
         }
 
-        $token = $request->request->get('_token');
+        $token = (string) $request->request->get('_token');
         if (!$this->isCsrfTokenValid('delete' . $id, $token)) {
             throw $this->createAccessDeniedException('Token CSRF invalide.');
         }

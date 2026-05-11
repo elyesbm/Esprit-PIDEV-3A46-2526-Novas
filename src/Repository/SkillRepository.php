@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Skill;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -93,7 +94,7 @@ class SkillRepository extends ServiceEntityRepository
      * @param string|null $type     'hard' ou 'soft' (contexte_skill)
      * @param string|null $categorie Nom de catégorie exact
      */
-    public function searchAndFilterQueryBuilder(?string $q, ?string $type, ?string $categorie)
+    public function searchAndFilterQueryBuilder(?string $q, ?string $type, ?string $categorie): QueryBuilder
     {
         $qb = $this->createQueryBuilder('s')
             ->orderBy('s.nom_skill', 'ASC');

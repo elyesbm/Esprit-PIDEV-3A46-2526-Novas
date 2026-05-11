@@ -4,8 +4,6 @@ namespace App\EventListener;
 
 use App\Entity\User;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Http\Event\InteractiveLoginEvent;
 use Symfony\Component\Security\Http\SecurityEvents;
@@ -25,8 +23,6 @@ use Symfony\Component\Security\Http\SecurityEvents;
 class TwoFactorAuthenticationListener implements EventSubscriberInterface
 {
     public function __construct(
-        private RouterInterface       $router,
-        private RequestStack          $requestStack,
         private TokenStorageInterface $tokenStorage,
     ) {}
 

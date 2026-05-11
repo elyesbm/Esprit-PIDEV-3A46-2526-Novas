@@ -59,10 +59,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime', nullable: true)]
     private ?\DateTimeInterface $twoFactorEnabledAt = null;
 
+    /** @var list<string>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $backupCodes = null;
 
     /** Encodage facial 128D (face-api.js) pour connexion par reconnaissance faciale */
+    /** @var list<float>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $faceEncoding = null;
 
@@ -74,27 +76,35 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeInterface $resetTokenExpiresAt = null;
 
     // 🔗 RELATIONS
+    /** @var Collection<int, Article> */
     #[ORM\OneToMany(mappedBy: 'auteur', targetEntity: Article::class)]
     private Collection $articles;
 
+    /** @var Collection<int, Commentaire> */
     #[ORM\OneToMany(mappedBy: 'auteur', targetEntity: Commentaire::class)]
     private Collection $commentaires;
 
+    /** @var Collection<int, Publication> */
     #[ORM\OneToMany(mappedBy: 'auteur', targetEntity: Publication::class)]
     private Collection $publications;
 
+    /** @var Collection<int, Offrejob> */
     #[ORM\OneToMany(mappedBy: 'createur', targetEntity: Offrejob::class)]
     private Collection $offrejobs;
 
+    /** @var Collection<int, CondidatureJob> */
     #[ORM\OneToMany(mappedBy: 'condidat', targetEntity: CondidatureJob::class)]
     private Collection $condidatureJobs;
 
+    /** @var Collection<int, CandidatureJob> */
     #[ORM\OneToMany(mappedBy: 'candidat', targetEntity: CandidatureJob::class)]
     private Collection $candidatureJobs;
 
+    /** @var Collection<int, Reservation> */
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Reservation::class)]
     private Collection $reservations;
 
+    /** @var Collection<int, Skill> */
     #[ORM\OneToMany(mappedBy: 'createur', targetEntity: Skill::class)]
     private Collection $skills;
 
@@ -148,11 +158,73 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function enableTwoFactor(): static { $this->twoFactorEnabledAt = new \DateTime('now'); return $this; }
     public function disableTwoFactor(): static { $this->twoFactorEnabledAt = null; return $this; }
 
-    public function getBackupCodes(): ?array { return $this->backupCodes; }
-    public function setBackupCodes(?array $backupCodes): static { $this->backupCodes = $backupCodes; return $this; }
+    /** @return list<string>|null */
+    public function getBackupCodes(): ?array
+    {
+        if ($this->backupCodes === null) {
+            return null;
+        }
 
-    public function getFaceEncoding(): ?array { return $this->faceEncoding; }
-    public function setFaceEncoding(?array $faceEncoding): static { $this->faceEncoding = $faceEncoding; return $this; }
+        $codes = [];
+        foreach ($this->backupCodes as $code) {
+            if (\is_string($code) && $code !== '') {
+                $codes[] = $code;
+            }
+        }
+
+        return $codes;
+    }
+    /** @param list<string>|null $backupCodes */
+    public function setBackupCodes(?array $backupCodes): static
+    {
+        if ($backupCodes === null) {
+            $this->backupCodes = null;
+            return $this;
+        }
+
+        $codes = [];
+        foreach (array_values($backupCodes) as $code) {
+            if (\is_string($code) && $code !== '') {
+                $codes[] = $code;
+            }
+        }
+        $this->backupCodes = $codes;
+        return $this;
+    }
+
+    /** @return list<float>|null */
+    public function getFaceEncoding(): ?array
+    {
+        if ($this->faceEncoding === null) {
+            return null;
+        }
+
+        $encoding = [];
+        foreach ($this->faceEncoding as $value) {
+            if (\is_int($value) || \is_float($value)) {
+                $encoding[] = (float) $value;
+            }
+        }
+
+        return $encoding;
+    }
+    /** @param list<float>|null $faceEncoding */
+    public function setFaceEncoding(?array $faceEncoding): static
+    {
+        if ($faceEncoding === null) {
+            $this->faceEncoding = null;
+            return $this;
+        }
+
+        $encoding = [];
+        foreach (array_values($faceEncoding) as $value) {
+            if (\is_int($value) || \is_float($value)) {
+                $encoding[] = (float) $value;
+            }
+        }
+        $this->faceEncoding = $encoding;
+        return $this;
+    }
     public function hasFaceEncoding(): bool { return $this->faceEncoding !== null && \count($this->faceEncoding) > 0; }
 
     public function getResetToken(): ?string { return $this->resetToken; }
@@ -164,6 +236,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->resetToken !== null && $this->resetTokenExpiresAt !== null && $this->resetTokenExpiresAt > new \DateTime();
     }
 
+    /** @return list<string> */
     public function getRoles(): array
     {
         $role = $this->ROLE ?? 'ROLE_USER';
@@ -181,12 +254,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     // Getters pour les collections
+    /** @return Collection<int, Article> */
     public function getArticles(): Collection { return $this->articles; }
+    /** @return Collection<int, Commentaire> */
     public function getCommentaires(): Collection { return $this->commentaires; }
+    /** @return Collection<int, Publication> */
     public function getPublications(): Collection { return $this->publications; }
+    /** @return Collection<int, Offrejob> */
     public function getOffrejobs(): Collection { return $this->offrejobs; }
+    /** @return Collection<int, CondidatureJob> */
     public function getCondidatureJobs(): Collection { return $this->condidatureJobs; }
+    /** @return Collection<int, CandidatureJob> */
     public function getCandidatureJobs(): Collection { return $this->candidatureJobs; }
+    /** @return Collection<int, Reservation> */
     public function getReservations(): Collection { return $this->reservations; }
+    /** @return Collection<int, Skill> */
     public function getSkills(): Collection { return $this->skills; }
 }

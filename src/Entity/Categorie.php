@@ -21,6 +21,7 @@ class Categorie
     #[ORM\Column(length: 255)]
     private ?string $description_categorie = null;
 
+    /** @var Collection<int, Article> */
     #[ORM\OneToMany(mappedBy: 'categorie', targetEntity: Article::class)]
     private Collection $articles;
 
@@ -34,5 +35,6 @@ class Categorie
     public function setNomCategorie(string $nom_categorie): static { $this->nom_categorie = $nom_categorie; return $this; }
     public function getDescriptionCategorie(): ?string { return $this->description_categorie; }
     public function setDescriptionCategorie(string $description_categorie): static { $this->description_categorie = $description_categorie; return $this; }
+    /** @return Collection<int, Article> */
     public function getArticles(): Collection { return $this->articles; }
 }

@@ -23,10 +23,10 @@ class AtelierController extends AbstractController
     ): Response
     {
         $searchParam = $request->query->get('search');
-        $search = $searchParam ?? '';
+        $search = is_string($searchParam) && trim($searchParam) !== '' ? trim($searchParam) : null;
         $contexte = $request->query->get('contexte');
         $sortParam = $request->query->get('sort');
-        $sort = $sortParam ?? 'date_asc';
+        $sort = is_string($sortParam) && trim($sortParam) !== '' ? trim($sortParam) : 'date_asc';
 
         $contexteInt = null;
         if ($contexte !== null && $contexte !== '') {
@@ -42,7 +42,7 @@ class AtelierController extends AbstractController
         }
 
         $topAtelierRow = $reservationRepository->findTopAtelierByReservations();
-        $hasFilter = $search !== '' || $contexteInt !== null;
+        $hasFilter = $search !== null || $contexteInt !== null;
         $shouldPinTop = $sortParam === null && ! $hasFilter;
         $pinAtelierId = $shouldPinTop && isset($topAtelierRow['atelier'])
             ? $topAtelierRow['atelier']->getId()
@@ -54,7 +54,7 @@ class AtelierController extends AbstractController
 
         return $this->render('front/reservation/ateliers.html.twig', [
             'ateliers' => $ateliers,
-            'search' => $search,
+            'search' => $search ?? '',
             'contexte' => $contexteInt,
             'sort' => $sort,
             'topAtelier' => $topAtelierRow['atelier'] ?? null,

@@ -5,7 +5,6 @@ namespace App\Command;
 use App\Entity\CandidatureJob;
 use App\Entity\Offrejob;
 use App\Entity\User;
-use App\Repository\CandidatureJobRepository;
 use App\Repository\OffrejobRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,8 +24,7 @@ class SeedCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly UserRepository $users,
-        private readonly OffrejobRepository $offres,
-        private readonly CandidatureJobRepository $cands
+        private readonly OffrejobRepository $offres
     ) {
         parent::__construct();
     }

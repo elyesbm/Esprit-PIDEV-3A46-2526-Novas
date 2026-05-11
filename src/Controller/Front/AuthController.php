@@ -64,16 +64,24 @@ class AuthController extends AbstractController
         }
 
         // Validation CSRF
-        if (!$this->isCsrfTokenValid('authenticate', $data['_csrf_token'] ?? '')) {
+        if (!$this->isCsrfTokenValid('authenticate', (string) ($data['_csrf_token'] ?? ''))) {
             return $this->json(['error' => 'Token CSRF invalide. Rechargez la page et réessayez.'], 403);
         }
 
         // Validation du descripteur facial
-        $descriptor = $data['descriptor'] ?? null;
-        if (!\is_array($descriptor) || \count($descriptor) !== 128) {
+        $descriptorRaw = $data['descriptor'] ?? null;
+        if (!\is_array($descriptorRaw) || \count($descriptorRaw) !== 128) {
             return $this->json([
-                'error' => 'Descripteur facial invalide (' . \count((array) $descriptor) . ' valeurs reçues, 128 attendues)'
+                'error' => 'Descripteur facial invalide (' . \count((array) $descriptorRaw) . ' valeurs reçues, 128 attendues)'
             ], 400);
+        }
+
+        $descriptor = [];
+        foreach (array_values($descriptorRaw) as $value) {
+            if (!\is_int($value) && !\is_float($value)) {
+                return $this->json(['error' => 'Descripteur facial invalide (valeurs non numeriques).'], 400);
+            }
+            $descriptor[] = (float) $value;
         }
 
         // Recherche de l'utilisateur correspondant
@@ -87,7 +95,7 @@ class AuthController extends AbstractController
             $session = $request->getSession();
             $session->set('2fa_user_pending', [
                 'id' => $user->getId(),
-                'email' => $user->getEMAIL(),
+                'email' => (string) $user->getEMAIL(),
             ]);
             
             return $this->json([
@@ -143,7 +151,7 @@ class AuthController extends AbstractController
             /** @var UploadedFile|null $photoFile */
             $photoFile = $form->get('photo')->getData();
             if ($photoFile) {
-                $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/uploads/faces';
+                $uploadsDir = $this->projectDir() . '/public/uploads/faces';
                 if (!is_dir($uploadsDir)) {
                     mkdir($uploadsDir, 0755, true);
                 }
@@ -160,7 +168,17 @@ class AuthController extends AbstractController
             if ($faceEncoding !== null && $faceEncoding !== '') {
                 $decoded = json_decode($faceEncoding, true);
                 if (\is_array($decoded) && \count($decoded) === 128) {
-                    $user->setFaceEncoding($decoded);
+                    $normalizedFaceEncoding = [];
+                    foreach (array_values($decoded) as $value) {
+                        if (!\is_int($value) && !\is_float($value)) {
+                            $normalizedFaceEncoding = [];
+                            break;
+                        }
+                        $normalizedFaceEncoding[] = (float) $value;
+                    }
+                    if (\count($normalizedFaceEncoding) === 128) {
+                        $user->setFaceEncoding($normalizedFaceEncoding);
+                    }
                 }
             }
 
@@ -174,5 +192,15 @@ class AuthController extends AbstractController
         return $this->render('front/auth/register.html.twig', [
             'registrationForm' => $form,
         ]);
+    }
+
+    private function projectDir(): string
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('Invalid kernel.project_dir parameter.');
+        }
+
+        return $projectDir;
     }
 }

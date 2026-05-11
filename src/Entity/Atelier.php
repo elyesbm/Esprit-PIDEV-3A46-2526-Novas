@@ -53,6 +53,7 @@ class Atelier
     #[Assert\Choice(choices: [0, 1])]
     private ?int $contexte_atelier = null;
 
+    /** @var Collection<int, Reservation> */
     #[ORM\OneToMany(mappedBy: 'atelier', targetEntity: Reservation::class)]
     private Collection $reservations;
 
@@ -119,6 +120,7 @@ class Atelier
         return $this;
     }
 
+    /** @return Collection<int, Reservation> */
     public function getReservations(): Collection
     {
         return $this->reservations;

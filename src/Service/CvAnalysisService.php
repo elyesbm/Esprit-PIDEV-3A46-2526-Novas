@@ -114,6 +114,8 @@ class CvAnalysisService
 
     /**
      * Interroge l'IA Gemini (Google AI Studio) pour analyser le CV.
+     *
+     * @return array<string, mixed>
      */
     private function analyzeWithAI(string $filePath, string $fileName, string $cvText): array
     {
@@ -162,7 +164,11 @@ PROMPT;
 
         if (file_exists($filePath) && isset($supportedMimeTypes[$ext])) {
             $mimeType = $supportedMimeTypes[$ext];
-            $base64Data = base64_encode(file_get_contents($filePath));
+            $fileBinary = file_get_contents($filePath);
+            if ($fileBinary === false) {
+                return $this->getFallbackAnalysis($cvText, 'Impossible de lire le fichier CV.');
+            }
+            $base64Data = base64_encode($fileBinary);
             $parts[] = [
                 'inlineData' => [
                     'mimeType' => $mimeType,
@@ -217,7 +223,8 @@ PROMPT;
                 return $this->getFallbackAnalysis($cvText, "Réponse vide de Gemini");
             }
 
-            $content = preg_replace('/^```json\s*|\s*```$/i', '', trim($content));
+            $content = trim($content);
+            $content = preg_replace('/^```json\s*|\s*```$/i', '', $content) ?? $content;
             $data = json_decode($content, true);
 
             if (!is_array($data)) {
@@ -234,6 +241,8 @@ PROMPT;
 
     /**
      * Analyse de secours basée sur des mots-clés si l'IA n'est pas disponible.
+     *
+     * @return array<string, mixed>
      */
     private function getFallbackAnalysis(string $cvText, ?string $errorReason = null): array
     {

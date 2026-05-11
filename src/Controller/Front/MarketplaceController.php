@@ -26,7 +26,6 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 #[Route('/marketplace')]
 class MarketplaceController extends AbstractController
@@ -120,7 +119,7 @@ class MarketplaceController extends AbstractController
 
             // Ensure image file exists, otherwise use fallback
             $image = $article->getImageArticle() ?: 'skills-learning.jpg';
-            $imagesDir = $this->getParameter('kernel.project_dir') . '/public/images';
+            $imagesDir = $this->projectDir() . '/public/images';
             $imagePath = $imagesDir . '/' . $image;
             if (!is_file($imagePath)) {
                 $image = 'skills-learning.jpg';
@@ -192,7 +191,7 @@ class MarketplaceController extends AbstractController
                     $categorie = $article->getCategorie();
                     $auteur = $article->getAuteur();
                     $image = $article->getImageArticle() ?: 'skills-learning.jpg';
-                    $imagesDir = $this->getParameter('kernel.project_dir') . '/public/images';
+                    $imagesDir = $this->projectDir() . '/public/images';
                     if (!is_file($imagesDir . '/' . $image)) {
                         $image = 'skills-learning.jpg';
                     }
@@ -306,7 +305,7 @@ class MarketplaceController extends AbstractController
         $auteur = $articleEntity->getAuteur();
         // Detail image handling: prefer stored image if file exists
         $detailImage = $articleEntity->getImageArticle() ?: 'skills-learning.jpg';
-        $imagesDir = $this->getParameter('kernel.project_dir') . '/public/images';
+        $imagesDir = $this->projectDir() . '/public/images';
         if (!is_file($imagesDir . '/' . $detailImage)) {
             $detailImage = 'skills-learning.jpg';
         }
@@ -399,7 +398,7 @@ class MarketplaceController extends AbstractController
             }
             $articleEntity = $articlesById[$articleId];
             $image = $articleEntity->getImageArticle() ?: 'skills-learning.jpg';
-            $imagesDir = $this->getParameter('kernel.project_dir') . '/public/images';
+            $imagesDir = $this->projectDir() . '/public/images';
             if (!is_file($imagesDir . '/' . $image)) {
                 $image = 'skills-learning.jpg';
             }
@@ -651,7 +650,7 @@ class MarketplaceController extends AbstractController
             ?? 'gemini-2.0-flash'
         );
         $fallbackModels = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest'];
-        $modelsToTry = array_values(array_unique(array_filter(array_merge([$configuredModel], $fallbackModels), static fn ($m) => is_string($m) && trim($m) !== '')));
+        $modelsToTry = array_values(array_unique(array_filter(array_merge([$configuredModel], $fallbackModels), static fn (string $m): bool => trim($m) !== '')));
 
         try {
             $modelsResponse = $httpClient->request('GET', sprintf('https://generativelanguage.googleapis.com/v1beta/models?key=%s', rawurlencode($apiKey)));
@@ -904,7 +903,7 @@ class MarketplaceController extends AbstractController
             $alreadySentForSession[$stripeSessionId] = true;
             $session->set('marketplace_sms_sent_sessions', $alreadySentForSession);
             $this->addFlash('success', 'SMS de confirmation envoye.');
-        } catch (TransportExceptionInterface|\Throwable $e) {
+        } catch (\Throwable $e) {
             $this->addFlash('error', 'Erreur reseau Twilio: ' . $e->getMessage());
         }
     }
@@ -1011,7 +1010,7 @@ class MarketplaceController extends AbstractController
         $articlesEntities = $articleRepository->findBy([], ['id' => 'DESC']);
         $mesArticles = array_map(function (Article $article): array {
             $categorie = $article->getCategorie();
-            $imagesDir = $this->getParameter('kernel.project_dir') . '/public/images';
+            $imagesDir = $this->projectDir() . '/public/images';
             $image = $article->getImageArticle() ?: 'skills-learning.jpg';
             if (!is_file($imagesDir . '/' . $image)) {
                 $image = 'skills-learning.jpg';
@@ -1101,7 +1100,7 @@ class MarketplaceController extends AbstractController
                         $errors[] = $fv->getMessage();
                     }
                 } else {
-                    $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/images';
+                    $uploadsDir = $this->projectDir() . '/public/images';
                     $newFilename = uniqid('article_', true) . '.' . ($uploadedFile->getClientOriginalExtension() ?: 'jpg');
                     try {
                         $uploadedFile->move($uploadsDir, $newFilename);
@@ -1118,13 +1117,13 @@ class MarketplaceController extends AbstractController
                     $this->addFlash('error', $err);
                 }
             } else {
-                $titre = $data['titre'];
-                $contenu = $data['contenu'];
-                $prix = (float) str_replace(',', '.', $data['prix']);
-                $type = $data['type'] ?? 'academic';
-                $categorieId = (int) $data['categorie'];
-                $statut = $data['statut'] ?? 'disponible';
-                $imageArticle = $data['image_article'] ?? 'skills-learning.jpg';
+                $titre = (string) $data['titre'];
+                $contenu = (string) $data['contenu'];
+                $prix = (float) str_replace(',', '.', (string) $data['prix']);
+                $type = (string) $data['type'];
+                $categorieId = (int) ((string) $data['categorie']);
+                $statut = (string) $data['statut'];
+                $imageArticle = (string) $data['image_article'];
                 $categorie = $categorieRepository->find($categorieId);
 
                 if (!$categorie instanceof Categorie) {
@@ -1239,7 +1238,7 @@ class MarketplaceController extends AbstractController
                         $errors[] = $fv->getMessage();
                     }
                 } else {
-                    $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/images';
+                    $uploadsDir = $this->projectDir() . '/public/images';
                     $newFilename = uniqid('article_', true) . '.' . ($uploadedFile->getClientOriginalExtension() ?: 'jpg');
                     try {
                         $uploadedFile->move($uploadsDir, $newFilename);
@@ -1256,13 +1255,13 @@ class MarketplaceController extends AbstractController
                     $this->addFlash('error', $err);
                 }
             } else {
-                $titre = $data['titre'];
-                $contenu = $data['contenu'];
-                $prix = (float) str_replace(',', '.', $data['prix']);
-                $type = $data['type'] ?? 'academic';
-                $categorieId = (int) $data['categorie'];
-                $statut = $data['statut'] ?? 'disponible';
-                $imageArticle = $data['image_article'] ?? 'skills-learning.jpg';
+                $titre = (string) $data['titre'];
+                $contenu = (string) $data['contenu'];
+                $prix = (float) str_replace(',', '.', (string) $data['prix']);
+                $type = (string) $data['type'];
+                $categorieId = (int) ((string) $data['categorie']);
+                $statut = (string) $data['statut'];
+                $imageArticle = (string) $data['image_article'];
 
                 $categorie = $categorieRepository->find($categorieId);
 
@@ -1337,16 +1336,18 @@ class MarketplaceController extends AbstractController
         }, $categoriesEntities);
 
         if ($request->isMethod('POST')) {
-            $titre = $request->request->get('titre');
-            $contenu = $request->request->get('contenu');
-            $prix = $request->request->get('prix');
-            $type = $request->request->get('type', 'academic');
-            $categorieId = $request->request->get('categorie');
-            $statut = $request->request->get('statut', 'disponible');
+            $titre = trim((string) $request->request->get('titre', ''));
+            $contenu = trim((string) $request->request->get('contenu', ''));
+            $prixRaw = trim((string) $request->request->get('prix', ''));
+            $prix = $prixRaw === '' ? null : (float) str_replace(',', '.', $prixRaw);
+            $type = (string) $request->request->get('type', 'academic');
+            $categorieIdRaw = trim((string) $request->request->get('categorie', ''));
+            $categorieId = $categorieIdRaw === '' ? null : (int) $categorieIdRaw;
+            $statut = (string) $request->request->get('statut', 'disponible');
             $imageArticle = trim((string) $request->request->get('image_article', ''));
             $uploadedFile = $request->files->get('image');
             if ($uploadedFile instanceof UploadedFile) {
-                $uploadsDir = $this->getParameter('kernel.project_dir') . '/public/images';
+                $uploadsDir = $this->projectDir() . '/public/images';
                 $newFilename = uniqid('article_', true) . '.' . ($uploadedFile->getClientOriginalExtension() ?: 'jpg');
                 try {
                     $uploadedFile->move($uploadsDir, $newFilename);
@@ -1361,7 +1362,7 @@ class MarketplaceController extends AbstractController
                 $imageArticle = $article->getImageArticle() ?: 'skills-learning.jpg';
             }
 
-            if (!$titre || !$contenu || !$prix || !$categorieId) {
+            if ($titre === '' || $contenu === '' || $prix === null || $categorieId === null) {
                 $this->addFlash('error', 'Merci de remplir tous les champs obligatoires.');
             } else {
                 $categorie = $categorieRepository->find($categorieId);
@@ -1374,7 +1375,7 @@ class MarketplaceController extends AbstractController
                         ->setContenueArticle($contenu)
                         ->setImageArticle($imageArticle)
                         ->setTypeArticle($type)
-                        ->setPrixArticle((float) $prix)
+                        ->setPrixArticle($prix)
                         ->setStatutArticle($statut)
                         ->setCategorie($categorie);
 
@@ -1401,7 +1402,7 @@ class MarketplaceController extends AbstractController
     ): Response {
         // Allow public deletion: no authentication required here (CSRF check remains)
 
-        if (!$this->isCsrfTokenValid('supprimer_article_' . $id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('supprimer_article_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token CSRF invalide.');
             return $this->redirectToRoute('app_marketplace_index');
         }
@@ -1562,7 +1563,7 @@ class MarketplaceController extends AbstractController
     {
         // public category deletion: no authentication required (CSRF check remains)
 
-        if (!$this->isCsrfTokenValid('supprimer_categorie_' . $id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('supprimer_categorie_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token CSRF invalide.');
             return $this->redirectToRoute('app_marketplace_categories');
         }
@@ -1614,5 +1615,15 @@ class MarketplaceController extends AbstractController
         }
 
         return false;
+    }
+
+    private function projectDir(): string
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        if (!is_string($projectDir)) {
+            throw new \RuntimeException('Invalid kernel.project_dir parameter.');
+        }
+
+        return $projectDir;
     }
 }

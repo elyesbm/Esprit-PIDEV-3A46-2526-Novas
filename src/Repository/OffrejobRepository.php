@@ -9,6 +9,9 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
+/**
+ * @extends ServiceEntityRepository<Offrejob>
+ */
 class OffrejobRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -17,6 +20,9 @@ class OffrejobRepository extends ServiceEntityRepository
     }
 
     /** Front: offres visibles (recherche + filtres + tri) */
+    /**
+     * @return Offrejob[]
+     */
     public function searchAndSort(
         ?string $q,
         ?string $categorie,
@@ -75,6 +81,9 @@ class OffrejobRepository extends ServiceEntityRepository
     }
 
     /** Créateur: mes offres (recherche + filtres + tri) */
+    /**
+     * @return Offrejob[]
+     */
     public function searchMine(
         int $creatorId,
         ?string $q,
@@ -141,7 +150,7 @@ class OffrejobRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    private function applyFilters($qb, ?string $categorie, ?string $lieu, ?string $statut): void
+    private function applyFilters(QueryBuilder $qb, ?string $categorie, ?string $lieu, ?string $statut): void
     {
         if ($categorie) {
             $qb->andWhere('o.categorie_offre = :categorie')

@@ -147,7 +147,7 @@ class PublicationAdminController extends AbstractController
     #[Route('/{id}/delete', name: 'delete', methods: ['POST'])]
     public function delete(int $id, Request $request, PublicationRepository $publicationRepo, EntityManagerInterface $em): Response
     {
-        if (!$this->isCsrfTokenValid('admin_delete_pub_' . $id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('admin_delete_pub_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token invalide');
             return $this->redirectToRoute('app_admin_publications_list');
         }
@@ -168,7 +168,7 @@ class PublicationAdminController extends AbstractController
     #[Route('/{id}/approve', name: 'approve', methods: ['POST'])]
     public function approve(int $id, Request $request, PublicationRepository $publicationRepo, EntityManagerInterface $em): Response
     {
-        if (!$this->isCsrfTokenValid('admin_pub_action_' . $id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('admin_pub_action_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token invalide');
             return $this->redirectToRoute('app_admin_publications_edit', ['id' => $id]);
         }
@@ -188,7 +188,7 @@ class PublicationAdminController extends AbstractController
     #[Route('/{id}/hide', name: 'hide', methods: ['POST'])]
     public function hide(int $id, Request $request, PublicationRepository $publicationRepo, EntityManagerInterface $em): Response
     {
-        if (!$this->isCsrfTokenValid('admin_pub_action_' . $id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('admin_pub_action_' . $id, (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Token invalide');
             return $this->redirectToRoute('app_admin_publications_edit', ['id' => $id]);
         }

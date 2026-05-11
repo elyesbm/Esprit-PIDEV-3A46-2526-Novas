@@ -112,7 +112,16 @@ class ScoreHistoryService
     /**
      * Construit le dataset complet pour Chart.js — 7 jours d'historique.
      *
-     * @return array{labels: string[], datasets: array, stats: array}
+     * @return array{
+     *   labels: list<string>,
+     *   datasets: array{
+     *     cv_score: list<float|null>,
+     *     maturity_score: list<float|null>,
+     *     competitiveness_index: list<float|null>,
+     *     events: list<int>
+     *   },
+     *   stats: array<string, mixed>
+     * }
      */
     public function buildChartData(int $days = 7): array
     {
@@ -147,7 +156,7 @@ class ScoreHistoryService
         $globalStats = $this->scoreHistoryRepo->getGlobalStats($days);
 
         // Calculer la tendance : comparaison 1ère moitié vs 2ème moitié
-        $validCv = array_values(array_filter($avgCv, fn($v) => $v !== null));
+        $validCv = array_values(array_filter($avgCv, static fn (?float $v): bool => $v !== null));
         $trend   = $this->computeTrend($validCv);
 
         return [
@@ -196,7 +205,11 @@ class ScoreHistoryService
         return $entry;
     }
 
-    /** Calcule le % de variation entre la 1ère et 2ème moitié de la période */
+    /**
+     * Calcule le % de variation entre la 1ère et 2ème moitié de la période.
+     *
+     * @param list<float|int> $values
+     */
     private function computeTrend(array $values): float
     {
         if (count($values) < 2) return 0;
